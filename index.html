@@ -1,0 +1,3139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!--
+  DATENSCHUTZ – Content Security Policy:
+  Diese Regel verbietet dem Browser JEDE Verbindung nach außen
+  (kein Server, keine Schriftarten, keine Bibliotheken, kein Tracking).
+  Deine CSV-Daten können die Seite damit technisch nicht verlassen.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#070c16">
+<meta name="description" content="Consumply – lokale Analyse von Stromverbrauch und Einspeisung aus CSV-Dateien.">
+<title>Consumply | Energieanalyse</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1424'/%3E%3Cpath d='M18 4 8 18h7l-2 10 11-15h-7z' fill='%2322d3ee'/%3E%3C/svg%3E">
+
+<style>
+/* =========================================================
+   1. GRUNDLAGEN & FARBEN
+   ========================================================= */
+:root {
+  --bg: #070c16;
+  --surface: #0e1625;
+  --surface-2: #131d2f;
+  --surface-3: #18243a;
+  --border: #1f2e46;
+  --border-strong: #2c4061;
+  --text: #eef3f9;
+  --text-2: #c3cfdd;
+  --muted: #8193aa;
+  --blue: #3b82f6;
+  --cyan: #22d3ee;
+  --green: #34d399;
+  --amber: #fbbf24;
+  --red: #fb7185;
+  --radius: 18px;
+  --shadow: 0 16px 40px rgba(0, 0, 0, .28);
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 90px; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 520px at 85% -8%, rgba(34, 211, 238, .08), transparent 60%),
+    radial-gradient(900px 480px at -10% 8%, rgba(59, 130, 246, .08), transparent 60%),
+    var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.container { width: min(1200px, calc(100% - 32px)); margin-inline: auto; }
+
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 6px; }
+
+h1, h2, h3 { line-height: 1.2; margin: 0; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* =========================================================
+   2. KOPFZEILE
+   ========================================================= */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(7, 12, 22, .88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+.header-inner {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: 2.5px;
+}
+.logo .accent { color: var(--cyan); }
+.logo-mark {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, #1d4ed8, #0891b2);
+  box-shadow: 0 6px 18px rgba(8, 145, 178, .35);
+}
+
+.header-actions { display: flex; align-items: center; gap: 10px; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.badge svg { color: var(--green); flex: none; }
+
+/* =========================================================
+   3. BUTTONS & FORMULARE
+   ========================================================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 11px 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s, border-color .15s, background .15s, color .15s;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn-primary { background: linear-gradient(135deg, #2563eb, #0891b2); color: #fff; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(37, 99, 235, .32); }
+.btn-ghost { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-2); }
+.btn-ghost:hover { border-color: var(--cyan); color: var(--text); }
+.btn-danger { background: transparent; border-color: rgba(251, 113, 133, .35); color: #fda4af; }
+.btn-danger:hover { border-color: var(--red); color: #fff; }
+.btn-sm { padding: 8px 13px; font-size: 13px; border-radius: 9px; }
+
+.icon-btn {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  flex: none;
+}
+.icon-btn:hover { color: var(--red); border-color: var(--red); }
+
+.field label, .field .field-label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: #0a111e;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+textarea { min-height: 70px; resize: vertical; }
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238193aa' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(34, 211, 238, .15); }
+input.is-invalid { border-color: var(--red); }
+::placeholder { color: #5b6b82; }
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+.check input { width: 18px; height: 18px; accent-color: var(--cyan); margin: 0; flex: none; }
+
+.hint { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+.hint.error { color: var(--red); }
+
+/* Segmentierte Auswahl (Tag/Woche/Monat) */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 11px;
+  background: #0a111e;
+}
+.segmented button {
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.segmented button:hover:not(:disabled) { color: var(--text); }
+.segmented button[aria-pressed="true"] { background: linear-gradient(135deg, #1d4ed8, #0e7490); color: #fff; }
+.segmented button:disabled { opacity: .3; cursor: not-allowed; }
+
+/* =========================================================
+   4. LAYOUT-BEREICHE
+   ========================================================= */
+main { padding: 30px 0 60px; }
+
+.hero {
+  padding: 34px 38px;
+  margin-bottom: 22px;
+  border: 1px solid #22385a;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(34, 211, 238, .14), transparent 38%),
+    linear-gradient(135deg, #12223a, #0b1322 72%);
+}
+.eyebrow { color: var(--cyan); font-size: 11px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; }
+.hero h1 { font-size: clamp(27px, 4.6vw, 42px); letter-spacing: -1px; margin: 12px 0 10px; }
+.hero h1 span { color: var(--cyan); }
+.hero p { color: #a9b8cc; max-width: 680px; }
+
+.panel {
+  margin-bottom: 20px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 20px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.section-title { display: flex; align-items: baseline; gap: 10px; font-size: 19px; }
+.section-number { color: var(--cyan); font-size: 12px; font-weight: 800; letter-spacing: 1px; }
+.subtitle { margin-top: 5px; color: var(--muted); font-size: 14px; }
+
+.section-heading { margin: 30px 0 14px; }
+
+/* =========================================================
+   5. IMPORT
+   ========================================================= */
+.dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 34px 18px;
+  text-align: center;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 16px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.dropzone:hover, .dropzone.is-dragover { border-color: var(--cyan); background: #11213a; }
+.dropzone:focus-within { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.dropzone input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.dz-icon { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 14px; background: rgba(34, 211, 238, .1); color: var(--cyan); }
+.dz-title { font-size: 16px; font-weight: 700; }
+.dz-hint { font-size: 13px; color: var(--muted); }
+.dz-hint u { color: var(--cyan); text-decoration: none; font-weight: 600; }
+
+.actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }
+
+.message { min-height: 22px; margin-top: 14px; font-size: 13.5px; color: var(--muted); white-space: pre-line; }
+.message.success { color: var(--green); }
+.message.error { color: var(--red); }
+.message.info { color: var(--text-2); }
+
+.privacy-note {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 16px;
+  padding: 13px 15px;
+  border: 1px solid rgba(52, 211, 153, .22);
+  border-radius: 12px;
+  background: rgba(52, 211, 153, .05);
+  color: var(--text-2);
+  font-size: 13px;
+}
+.privacy-note svg { color: var(--green); flex: none; margin-top: 2px; }
+
+/* =========================================================
+   6. DATEIEN (QUELLEN)
+   ========================================================= */
+.detect-banner {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  font-size: 13.5px;
+}
+.detect-banner strong { display: block; color: var(--text); font-size: 14px; }
+.detect-banner span { color: var(--muted); }
+.detect-banner .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex: none; background: var(--cyan); box-shadow: 0 0 0 4px rgba(34, 211, 238, .15); }
+.detect-banner.has-export .dot { background: var(--green); box-shadow: 0 0 0 4px rgba(52, 211, 153, .15); }
+
+.source-list { display: grid; gap: 14px; }
+
+.source-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.source-card.is-disabled { opacity: .55; }
+.source-card.has-error { border-color: rgba(251, 113, 133, .45); }
+
+.source-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-3);
+}
+.source-dot { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+.source-title { flex: 1 1 200px; min-width: 0; }
+.source-title strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; }
+.source-title span { font-size: 12.5px; color: var(--muted); }
+
+.kind-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(34, 211, 238, .12);
+  color: var(--cyan);
+}
+.kind-badge.both { background: rgba(52, 211, 153, .13); color: var(--green); }
+.kind-badge.error { background: rgba(251, 113, 133, .14); color: var(--red); }
+
+.source-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px 15px 6px;
+}
+.source-foot { padding: 6px 15px 14px; }
+.source-status { font-size: 12.5px; color: var(--muted); }
+.source-status.error { color: var(--red); }
+
+/* =========================================================
+   7. BERICHT
+   ========================================================= */
+.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.report-grid .full { grid-column: 1 / -1; }
+.report-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+
+/* =========================================================
+   8. KENNZAHLEN
+   ========================================================= */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+
+.stat {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition: transform .2s, border-color .2s;
+}
+.stat:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.stat::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+}
+.stat.accent-amber::before { background: linear-gradient(90deg, #f59e0b, var(--amber)); }
+.stat.accent-green::before { background: linear-gradient(90deg, #059669, var(--green)); }
+.stat-label { display: block; margin-bottom: 10px; font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); }
+.stat-value { display: block; font-size: clamp(19px, 2.2vw, 25px); font-weight: 750; letter-spacing: -.4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat-sub { display: block; margin-top: 5px; font-size: 12px; color: var(--muted); }
+
+/* =========================================================
+   9. DIAGRAMME
+   ========================================================= */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 10px; font-size: 12.5px; color: var(--text-2); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+.chart-box { position: relative; min-height: 200px; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+.chart-box svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart-box text { font-family: var(--font); font-variant-numeric: tabular-nums; }
+.chart-empty { padding: 50px 10px; text-align: center; color: var(--muted); font-size: 14px; }
+.hover-band { fill: rgba(148, 163, 184, .09); }
+.hover-line { stroke: #5b708f; stroke-width: 1; stroke-dasharray: 3 3; }
+.hover-dot { fill: var(--bg); stroke: var(--cyan); stroke-width: 2.5; }
+
+.chart-tooltip {
+  position: absolute;
+  left: 0; top: 0;
+  z-index: 5;
+  min-width: 160px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: rgba(8, 14, 25, .96);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+  font-size: 12.5px;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, calc(-100% - 12px));
+  transition: opacity .12s;
+}
+.chart-tooltip.visible { opacity: 1; }
+.chart-tooltip .tt-title { color: var(--muted); font-size: 11.5px; margin-bottom: 5px; }
+.chart-tooltip .tt-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.chart-tooltip .tt-row span { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
+.chart-tooltip .tt-row i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.chart-tooltip .tt-row b { font-variant-numeric: tabular-nums; color: var(--text); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.sub-card { padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); min-width: 0; }
+.sub-card h3 { font-size: 15px; }
+.sub-card .subtitle { font-size: 12.5px; margin-bottom: 10px; }
+
+/* =========================================================
+   10. TABELLEN & LISTEN
+   ========================================================= */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th { position: sticky; top: 0; background: #142036; color: #93c5fd; font-weight: 700; font-size: 12px; }
+td { color: var(--text-2); font-variant-numeric: tabular-nums; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: #152239; }
+td.right, th.right { text-align: right; }
+tr.total td { font-weight: 700; color: var(--text); background: var(--surface-3); }
+th .tag { margin-left: 6px; padding: 1px 6px; border-radius: 5px; font-size: 10px; background: rgba(34, 211, 238, .16); color: var(--cyan); }
+th .tag.export { background: rgba(52, 211, 153, .16); color: var(--green); }
+td.col-hl { background: rgba(34, 211, 238, .05); }
+
+.peak-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.peak-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+.peak-rank { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: rgba(251, 191, 36, .12); color: var(--amber); flex: none; }
+.peak-main { flex: 1; min-width: 0; }
+.peak-main strong { display: block; font-variant-numeric: tabular-nums; }
+.peak-main span { font-size: 12px; color: var(--muted); }
+.peak-factor { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+.hint-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hint-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--text-2); }
+.hint-list li::before { content: ""; width: 8px; height: 8px; margin-top: 7px; border-radius: 50%; flex: none; background: var(--blue); }
+.hint-list li.warn::before { background: var(--amber); }
+.hint-list li.ok::before { background: var(--green); }
+
+.empty-state { padding: 26px; text-align: center; color: var(--muted); border: 1px dashed var(--border-strong); border-radius: 14px; }
+
+/* =========================================================
+   11. FUSSZEILE
+   ========================================================= */
+footer {
+  padding: 26px 0 34px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* =========================================================
+   12. ANIMATION & RESPONSIVE (Handy / Tablet)
+   ========================================================= */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#results > * { animation: rise .35s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 1000px) {
+  .source-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .two-col, .report-grid { grid-template-columns: 1fr; }
+  .badge .badge-text-long { display: none; }
+}
+
+@media (max-width: 560px) {
+  body { font-size: 14.5px; }
+  .container { width: calc(100% - 22px); }
+  main { padding-top: 18px; }
+  .hero { padding: 24px 20px; border-radius: 18px; }
+  .panel { padding: 17px; border-radius: 15px; }
+  .source-grid { grid-template-columns: 1fr; }
+  .stats { gap: 10px; }
+  .stat { padding: 14px 13px 12px; }
+  .stat-value { font-size: 18px; }
+  .logo { font-size: 16px; letter-spacing: 1.5px; }
+  .logo-mark { width: 30px; height: 30px; }
+  .header-actions .badge { display: none; }
+  .btn { padding: 11px 15px; }
+  .report-actions .btn { width: 100%; }
+  .segmented { width: 100%; }
+  .segmented button { flex: 1; }
+}
+</style>
+</head>
+
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="logo" href="#top" aria-label="Consumply – zum Seitenanfang">
+      <span class="logo-mark" aria-hidden="true">
+        <svg width="16" height="18" viewBox="0 0 16 22" fill="#fff"><path d="M10 0 0 13h6.5L5 22l11-14H9.5z"/></svg>
+      </span>
+      <span>CONSUM<span class="accent">PLY</span></span>
+    </a>
+    <div class="header-actions">
+      <span class="badge" title="Alle Daten bleiben auf diesem Gerät.">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span>100 % lokal<span class="badge-text-long"> · nichts wird übertragen</span></span>
+      </span>
+      <button id="headerPdfButton" class="btn btn-primary btn-sm" type="button" hidden>PDF-Bericht</button>
+    </div>
+  </div>
+</header>
+
+<main id="top" class="container">
+
+  <section class="hero">
+    <div class="eyebrow">Daten · Energie · Erkenntnisse</div>
+    <h1>Verstehe deinen <span>Energieverbrauch.</span></h1>
+    <p>Lade eine oder mehrere CSV-Dateien deines Zählers hoch. Consumply erkennt Verbrauch und Einspeisung, rechnet Einheiten um und erstellt ein vollständiges Dashboard samt PDF-Bericht – komplett auf deinem Gerät.</p>
+  </section>
+
+  <!-- 01 IMPORT -->
+  <section class="panel" aria-labelledby="importTitle">
+    <div class="panel-head">
+      <div>
+        <h2 id="importTitle" class="section-title"><span class="section-number">01</span>Daten importieren</h2>
+        <p class="subtitle">CSV-Dateien mit Komma, Semikolon oder Tabulator. Mehrere Dateien gleichzeitig möglich.</p>
+      </div>
+    </div>
+
+    <label id="dropzone" class="dropzone" for="fileInput">
+      <input id="fileInput" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" multiple>
+      <span class="dz-icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+      </span>
+      <span class="dz-title">CSV-Dateien hierher ziehen</span>
+      <span class="dz-hint">oder <u>tippen bzw. klicken zum Auswählen</u> · max. 25 MB pro Datei · bis zu 8 Dateien</span>
+    </label>
+
+    <div class="actions-row">
+      <span class="muted small">Zum Ausprobieren:</span>
+      <button class="btn btn-ghost btn-sm" type="button" data-sample="household">Haushalt (Stundenwerte)</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-sample="pv">PV-Anlage (15 min, kW)</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-sample="meter">Zählerstände (Jahr)</button>
+    </div>
+
+    <p id="importMessage" class="message" role="status" aria-live="polite"></p>
+
+    <div class="privacy-note">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>
+      <span><strong>Deine Daten bleiben auf deinem Gerät.</strong> Dateien, Anlagenname und Standort werden nur im Arbeitsspeicher deines Browsers verarbeitet – keine Übertragung, kein Server, keine Cookies, kein Tracking, keine externen Schriften oder Bibliotheken. Beim Neuladen oder Schließen der Seite ist alles gelöscht.</span>
+    </div>
+  </section>
+
+  <div id="dashboard" hidden>
+
+    <!-- 02 DATEIEN -->
+    <section class="panel" aria-labelledby="sourcesTitle">
+      <div class="panel-head">
+        <div>
+          <h2 id="sourcesTitle" class="section-title"><span class="section-number">02</span>Dateien &amp; Zuordnung</h2>
+          <p class="subtitle">Consumply erkennt Spalten, Einheit und Art der Werte automatisch. Falls etwas nicht stimmt, kannst du es hier anpassen.</p>
+        </div>
+        <button id="clearAllButton" class="btn btn-danger btn-sm" type="button">Alle Daten entfernen</button>
+      </div>
+      <div id="detectBanner" class="detect-banner" role="status" aria-live="polite"></div>
+      <div id="sourceList" class="source-list"></div>
+    </section>
+
+    <!-- 03 BERICHT -->
+    <section class="panel" aria-labelledby="reportTitle">
+      <div class="panel-head">
+        <div>
+          <h2 id="reportTitle" class="section-title"><span class="section-number">03</span>Anlage &amp; PDF-Bericht</h2>
+          <p class="subtitle">Diese Angaben erscheinen nur im PDF. Sie werden nirgends gespeichert und beim Neuladen gelöscht.</p>
+        </div>
+      </div>
+      <div class="report-grid">
+        <div class="field">
+          <label for="siteName">Anlagenname</label>
+          <input id="siteName" type="text" maxlength="80" placeholder="z. B. Werkstatt Nord" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="siteLocation">Anlagenstandort</label>
+          <input id="siteLocation" type="text" maxlength="100" placeholder="z. B. Innsbruck" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field full">
+          <label for="siteNote">Bemerkung (optional)</label>
+          <textarea id="siteNote" maxlength="400" placeholder="z. B. Analyse vor Installation der Wärmepumpe" autocomplete="off"></textarea>
+        </div>
+      </div>
+      <div class="report-actions">
+        <label class="check"><input id="showFileNames" type="checkbox"> Dateinamen im PDF anzeigen</label>
+        <button id="pdfButton" class="btn btn-primary" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>
+          PDF-Bericht herunterladen
+        </button>
+      </div>
+      <p id="pdfMessage" class="message" role="status" aria-live="polite"></p>
+    </section>
+
+    <p id="noResults" class="empty-state" hidden>Keine auswertbaren Daten. Prüfe die Zuordnung der Spalten oder aktiviere eine Datei.</p>
+
+    <div id="results">
+
+      <!-- 04 ÜBERSICHT -->
+      <section aria-labelledby="kpiTitle">
+        <h2 id="kpiTitle" class="section-title section-heading"><span class="section-number">04</span>Übersicht</h2>
+        <div id="kpiGrid" class="stats"></div>
+      </section>
+
+      <!-- 05 VERLAUF -->
+      <section class="panel" aria-labelledby="chartTitle" style="margin-top:20px">
+        <div class="panel-head">
+          <div>
+            <h2 id="chartTitle" class="section-title"><span class="section-number">05</span>Verlauf</h2>
+            <p id="chartSubtitle" class="subtitle"></p>
+          </div>
+          <div id="granButtons" class="segmented" role="group" aria-label="Zeitliche Auflösung">
+            <button type="button" data-gran="raw">Messwerte</button>
+            <button type="button" data-gran="day">Tag</button>
+            <button type="button" data-gran="week">Woche</button>
+            <button type="button" data-gran="month">Monat</button>
+          </div>
+        </div>
+        <div id="mainLegend" class="legend"></div>
+        <div id="mainChart" class="chart-box"></div>
+      </section>
+
+      <!-- 06 PROFIL -->
+      <section id="profilePanel" class="panel" aria-labelledby="profileTitle">
+        <div class="panel-head">
+          <div>
+            <h2 id="profileTitle" class="section-title"><span class="section-number">06</span>Verbrauchsprofil</h2>
+            <p class="subtitle">Wann im Tagesverlauf und an welchen Wochentagen typischerweise Energie bezogen wird.</p>
+          </div>
+        </div>
+        <div class="two-col">
+          <div id="hourCard" class="sub-card">
+            <h3>Ø Tagesprofil</h3>
+            <p class="subtitle">Mittlere Leistung je Uhrzeit in kW</p>
+            <div id="hourChart" class="chart-box"></div>
+          </div>
+          <div id="weekdayCard" class="sub-card">
+            <h3>Ø nach Wochentag</h3>
+            <p class="subtitle">Mittlere Energie pro Tag in kWh</p>
+            <div id="weekdayChart" class="chart-box"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 07 ÜBERSICHTSTABELLEN -->
+      <section id="breakdownPanel" class="panel" aria-labelledby="breakdownTitle">
+        <div class="panel-head">
+          <div>
+            <h2 id="breakdownTitle" class="section-title"><span class="section-number">07</span>Monate &amp; Dateien</h2>
+            <p class="subtitle">Summen je Kalendermonat und Anteil der einzelnen Dateien.</p>
+          </div>
+        </div>
+        <div id="monthWrap">
+          <div class="table-wrap"><table id="monthTable"></table></div>
+        </div>
+        <div id="sourceTableWrap" style="margin-top:16px">
+          <div class="table-wrap"><table id="sourceTable"></table></div>
+        </div>
+      </section>
+
+      <!-- 08 AUFFÄLLIGKEITEN -->
+      <section class="panel" aria-labelledby="insightsTitle">
+        <div class="panel-head">
+          <div>
+            <h2 id="insightsTitle" class="section-title"><span class="section-number">08</span>Auffälligkeiten &amp; Hinweise</h2>
+            <p class="subtitle">Spitzenwerte und Hinweise zur Datenqualität.</p>
+          </div>
+        </div>
+        <div class="two-col">
+          <div>
+            <h3 class="small muted" style="margin-bottom:10px;text-transform:uppercase;letter-spacing:.6px">Höchste Verbrauchswerte</h3>
+            <ol id="peakList" class="peak-list"></ol>
+          </div>
+          <div>
+            <h3 class="small muted" style="margin-bottom:10px;text-transform:uppercase;letter-spacing:.6px">Hinweise zur Analyse</h3>
+            <ul id="hintList" class="hint-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 09 VORSCHAU -->
+      <section class="panel" aria-labelledby="previewTitle">
+        <div class="panel-head">
+          <div>
+            <h2 id="previewTitle" class="section-title"><span class="section-number">09</span>Datenvorschau</h2>
+            <p id="previewInfo" class="subtitle"></p>
+          </div>
+          <div class="field" style="min-width:220px">
+            <label for="previewSelect">Datei</label>
+            <select id="previewSelect"></select>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="previewTable"></table></div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="container">CONSUMPLY · Energy Intelligence · Alle Berechnungen laufen lokal in deinem Browser.</div>
+</footer>
+
+<script>
+"use strict";
+
+/* =========================================================================
+   CONSUMPLY – App-Logik
+   -------------------------------------------------------------------------
+   Wichtig zum Datenschutz:
+   - Es gibt KEIN localStorage, KEINE Cookies, KEINE Netzwerkanfragen.
+   - Alle Daten liegen nur in der Variable "app" im Arbeitsspeicher.
+   - Neuladen der Seite = alles weg.
+   ========================================================================= */
+
+
+/* =========================================================
+   1. KONSTANTEN & ZUSTAND
+   ========================================================= */
+
+const MINUTE = 60000;
+const HOUR = 3600000;
+const DAY = 86400000;
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
+const MAX_FILES = 8;
+
+const WEEKDAYS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+const MONTHS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+const MONTHS_LONG = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
+const UNITS = {
+  kWh: { scale: 1, power: false, label: "kWh (Energie)" },
+  Wh:  { scale: 0.001, power: false, label: "Wh (Energie)" },
+  MWh: { scale: 1000, power: false, label: "MWh (Energie)" },
+  kW:  { scale: 1, power: true, label: "kW (Leistung)" },
+  W:   { scale: 0.001, power: true, label: "W (Leistung)" }
+};
+
+/* Farben: "screen" = dunkles Dashboard, "print" = heller PDF-Bericht */
+const THEMES = {
+  screen: {
+    grid: "#1a283d", zero: "#3a5070", label: "#8193aa", font: 11, lineWidth: 1.7,
+    series: ["#22d3ee", "#3b82f6", "#a78bfa", "#f472b6", "#fbbf24", "#fb923c", "#2dd4bf", "#e879f9"],
+    export: "#34d399"
+  },
+  print: {
+    grid: "#e6ebf2", zero: "#94a3b8", label: "#64748b", font: 6.8, lineWidth: 0.8,
+    series: ["#0891b2", "#2563eb", "#7c3aed", "#db2777", "#d97706", "#ea580c", "#0d9488", "#c026d3"],
+    export: "#059669"
+  }
+};
+
+/* Der gesamte Zustand der App – nur im Arbeitsspeicher */
+const app = {
+  sources: [],          // geladene Dateien
+  nextId: 1,
+  combined: null,       // zusammengeführte Auswertung
+  granularity: "raw",
+  granManual: false,
+  previewId: null
+};
+
+const $ = (id) => document.getElementById(id);
+
+
+/* =========================================================
+   2. HILFSFUNKTIONEN (DOM & FORMATIERUNG)
+   ========================================================= */
+
+/* Erzeugt ein HTML-Element. Texte werden immer als reiner Text gesetzt
+   (textContent) – so kann eine CSV-Datei keinen Code einschleusen. */
+function h(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (value === null || value === undefined || value === false) continue;
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else if (key in node && !key.includes("-")) node[key] = value;
+    else node.setAttribute(key, value === true ? "" : value);
+  }
+  for (const child of children.flat()) {
+    if (child === null || child === undefined || child === false) continue;
+    node.append(child instanceof Node ? child : String(child));
+  }
+  return node;
+}
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs = {}) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value !== null && value !== undefined) node.setAttribute(key, value);
+  }
+  return node;
+}
+
+function showMessage(target, text, type = "") {
+  target.textContent = text;
+  target.className = "message" + (type ? " " + type : "");
+}
+
+const pad = (n) => String(n).padStart(2, "0");
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function fmtNum(value, decimals = 2) {
+  return value.toLocaleString("de-DE", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function autoDecimals(value) {
+  const a = Math.abs(value);
+  if (a === 0) return 0;
+  return a >= 10000 ? 0 : a >= 100 ? 1 : a >= 1 ? 2 : 3;
+}
+function fmtEnergy(value) {
+  if (!Number.isFinite(value)) return "–";
+  if (Math.abs(value) >= 100000) return fmtNum(value / 1000, 1) + " MWh";
+  return fmtNum(value, autoDecimals(value)) + " kWh";
+}
+function fmtPower(value) {
+  if (!Number.isFinite(value)) return "–";
+  if (Math.abs(value) >= 10000) return fmtNum(value / 1000, 2) + " MW";
+  return fmtNum(value, autoDecimals(value)) + " kW";
+}
+const fmtInt = (v) => Math.round(v).toLocaleString("de-DE");
+function fmtFactor(f) {
+  const s = fmtNum(f, Number.isInteger(f) ? 0 : (Math.abs(f) < 10 ? 3 : 2));
+  return s.includes(",") ? s.replace(/0+$/, "").replace(/,$/, "") : s;
+}
+
+function fmtDate(d) { return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`; }
+function fmtTime(d) { return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtDateTime(d) { return `${WEEKDAYS[d.getDay()]}, ${fmtDate(d)}, ${fmtTime(d)} Uhr`; }
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return fmtNum(bytes / 1024, 1) + " KB";
+  return fmtNum(bytes / 1048576, 1) + " MB";
+}
+function fmtSpan(ms) {
+  const days = ms / DAY;
+  if (days < 1) return fmtNum(ms / HOUR, 0) + " Stunden";
+  const rounded = days < 10 ? Math.round(days * 10) / 10 : Math.round(days);
+  return fmtNum(rounded, Number.isInteger(rounded) ? 0 : 1) + (rounded === 1 ? " Tag" : " Tage");
+}
+function fmtRange(startMs, endMs) {
+  // endMs ist exklusiv (Ende des letzten Intervalls) → letzter enthaltener Tag
+  const last = new Date(Math.max(startMs, endMs - 1));
+  return `${fmtDate(new Date(startMs))} – ${fmtDate(last)}`;
+}
+
+function describeResolution(ms) {
+  if (!ms) return "";
+  const min = ms / MINUTE, days = ms / DAY;
+  if (min < 1.5) return "Minutenwerte";
+  if (min < 50) return `${Math.round(min)}-Minuten-Werte`;
+  if (min < 90) return "Stundenwerte";
+  if (days < 0.9) return `${Math.round(min / 60)}-Stunden-Werte`;
+  if (days < 1.5) return "Tageswerte";
+  if (days >= 6 && days <= 8) return "Wochenwerte";
+  if (days >= 27 && days <= 32) return "Monatswerte";
+  if (days >= 85 && days <= 95) return "Quartalswerte";
+  if (days >= 360 && days <= 370) return "Jahreswerte";
+  return `Werte etwa alle ${fmtNum(days, days < 10 ? 1 : 0)} Tage`;
+}
+
+function quantile(values, q) {
+  if (!values.length) return NaN;
+  const sorted = Float64Array.from(values).sort();
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos), hi = Math.ceil(pos);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+
+
+/* =========================================================
+   3. CSV EINLESEN
+   ========================================================= */
+
+/* Text-Kodierung: zuerst UTF-8, sonst Windows-1252 (typisch für Excel) */
+function decodeText(buffer) {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+  } catch {
+    return new TextDecoder("windows-1252").decode(buffer);
+  }
+}
+
+function countOutsideQuotes(line, separator) {
+  let count = 0, quoted = false;
+  for (const char of line) {
+    if (char === '"') quoted = !quoted;
+    else if (char === separator && !quoted) count++;
+  }
+  return count;
+}
+
+/* Trennzeichen erkennen: das Zeichen, das in den meisten Zeilen
+   gleich oft vorkommt, gewinnt. */
+function detectSeparator(text) {
+  const lines = text.split(/\r\n|\n|\r/).filter((l) => l.trim()).slice(0, 25);
+  let best = ",", bestScore = -1;
+  for (const separator of [";", "\t", ",", "|"]) {
+    const freq = new Map();
+    for (const line of lines) {
+      const c = countOutsideQuotes(line, separator);
+      if (c > 0) freq.set(c, (freq.get(c) || 0) + 1);
+    }
+    for (const [count, times] of freq) {
+      const score = times * 1000 + count;
+      if (score > bestScore) { bestScore = score; best = separator; }
+    }
+  }
+  return best;
+}
+
+/* Vollständiger CSV-Parser (unterstützt Anführungszeichen und
+   Zeilenumbrüche innerhalb von Feldern). */
+function parseCSV(text, separator) {
+  const rows = [];
+  let row = [], field = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (quoted) {
+      if (char === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else quoted = false;
+      } else field += char;
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === separator) {
+      row.push(field.trim()); field = "";
+    } else if (char === "\n" || char === "\r") {
+      row.push(field.trim()); rows.push(row);
+      row = []; field = "";
+      if (char === "\r" && text[i + 1] === "\n") i++;
+    } else field += char;
+  }
+  if (field !== "" || row.length) { row.push(field.trim()); rows.push(row); }
+  return rows.filter((r) => r.some((cell) => cell !== ""));
+}
+
+/* Findet die Kopfzeile – auch wenn vorher Infozeilen stehen
+   (z. B. Zählpunkt, Kundennummer bei Netzbetreiber-Exporten). */
+function locateHeader(rows) {
+  const sample = rows.slice(0, 60);
+  const freq = new Map();
+  for (const r of sample) freq.set(r.length, (freq.get(r.length) || 0) + 1);
+  let width = 1, best = 0;
+  for (const [len, count] of freq) {
+    if (count > best || (count === best && len > width)) { best = count; width = len; }
+  }
+  const looksLikeData = (r) => r.some((cell) => Number.isFinite(parseNumber(cell)) || parseDate(cell) !== null);
+  const first = sample.findIndex((r) => r.length >= width && looksLikeData(r));
+  if (first === -1) return { headerIndex: 0, width };
+  if (first === 0) return { headerIndex: -1, width };
+  return { headerIndex: first - 1, width };
+}
+
+function parseCSVFile(text) {
+  text = text.replace(/^\uFEFF/, "");
+  if (!text.trim()) throw new Error("Die Datei ist leer.");
+
+  // Excel schreibt manchmal "sep=;" in die erste Zeile
+  let separator = null;
+  const sepLine = /^sep=(.)\s*(\r\n|\n|\r)/i.exec(text);
+  if (sepLine) { separator = sepLine[1]; text = text.slice(sepLine[0].length); }
+  separator = separator || detectSeparator(text);
+
+  const rows = parseCSV(text, separator);
+  if (rows.length < 2) throw new Error("Zu wenige Zeilen – erwartet werden Kopfzeile und Datenzeilen.");
+
+  const { headerIndex, width: dataWidth } = locateHeader(rows);
+  const rawHeader = headerIndex >= 0 ? rows[headerIndex] : [];
+  const width = Math.max(dataWidth, rawHeader.length);
+  let headers = Array.from({ length: width }, (_, i) => (rawHeader[i] || "").trim() || `Spalte ${i + 1}`);
+
+  let data = rows.slice(headerIndex + 1).map((r) =>
+    r.length === width ? r : r.length > width ? r.slice(0, width) : r.concat(Array(width - r.length).fill(""))
+  );
+  if (!data.length) throw new Error("Keine Datenzeilen gefunden.");
+
+  // komplett leere Spalten ohne Überschrift entfernen
+  const keep = headers.map((hd, i) => rawHeader[i] || data.some((r) => r[i] !== ""));
+  if (keep.includes(false)) {
+    headers = headers.filter((_, i) => keep[i]);
+    data = data.map((r) => r.filter((_, i) => keep[i]));
+  }
+
+  // doppelte Spaltennamen eindeutig machen
+  const seen = {};
+  headers = headers.map((hd) => {
+    seen[hd] = (seen[hd] || 0) + 1;
+    return seen[hd] > 1 ? `${hd} (${seen[hd]})` : hd;
+  });
+
+  return { headers, rows: data, separator };
+}
+
+
+/* =========================================================
+   4. ZAHLEN, DATUM & WANDLERVERHÄLTNIS ERKENNEN
+   ========================================================= */
+
+/* Wandelt Text in eine Zahl um. Unterstützt:
+   1234,56 · 1.234,56 · 1234.56 · 1,234.56 · 1'234.5 · -0,5 · 12,3 kWh */
+function parseNumber(raw) {
+  if (raw === null || raw === undefined) return NaN;
+  let s = String(raw).trim().replace(/[\s\u00A0\u202F']/g, "");
+  s = s.replace(/(mwh|kwh|wh|kvarh|kw|w)$/i, "");
+  if (!s) return NaN;
+  let sign = 1;
+  if (s[0] === "-" || s[0] === "+") { if (s[0] === "-") sign = -1; s = s.slice(1); }
+  let norm;
+  if (/^\d+$/.test(s)) norm = s;
+  else if (/^\d*[.,]\d+$/.test(s)) norm = s.replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) norm = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) norm = s.replace(/,/g, "");
+  else return NaN;
+  const n = Number(norm);
+  return Number.isFinite(n) ? sign * n : NaN;
+}
+
+const RE_ISO = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:[.,]\d+)?)?\s*(Z|[+-]\d{2}:?\d{2})?$/i;
+const RE_DE = /^(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})(?:,?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?(?:\s*Uhr)?$/i;
+const RE_YMD = /^(\d{4})[./](\d{1,2})[./](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/;
+const RE_SLASH = /^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:,?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?$/i;
+const RE_YM = /^(\d{4})-(\d{1,2})$/;
+const RE_MY = /^(\d{1,2})[./](\d{4})$/;
+const TIME_RE = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
+
+function makeDate(y, mo, d, hh = 0, mi = 0, se = 0) {
+  if (y < 100) y += 2000;
+  if (y < 1970 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  if (mi > 59 || se > 59 || hh > 24 || (hh === 24 && (mi || se))) return null;
+  const date = new Date(y, mo - 1, d);
+  if (date.getMonth() !== mo - 1 || date.getDate() !== d) return null;
+  date.setHours(hh, mi, se, 0); // 24:00 wird automatisch zu 00:00 des Folgetags
+  return date;
+}
+
+/* Erkennt: 2026-08-01 14:15 · 01.08.2026 14:15 · 01/08/2026 · 2026/08/01 · 08.2026
+   Zeiträume wie "01.08.2026 00:00 - 01.08.2026 00:15" → Beginn wird genommen */
+function parseDate(raw) {
+  if (raw === null || raw === undefined) return null;
+  let s = String(raw).trim();
+  if (!s || s.length > 45) return null;
+  if (s.includes(" - ")) s = s.split(" - ")[0].trim();
+  let m;
+  if ((m = RE_ISO.exec(s))) {
+    if (m[7]) {
+      const d = new Date(s.replace(/\s+/, "T").replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
+      return isNaN(d) ? null : d;
+    }
+    return makeDate(+m[1], +m[2], +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+  }
+  if ((m = RE_DE.exec(s))) return makeDate(+m[3], +m[2], +m[1], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+  if ((m = RE_YMD.exec(s))) return makeDate(+m[1], +m[2], +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+  if ((m = RE_SLASH.exec(s))) {
+    let day = +m[1], month = +m[2];
+    if (month > 12 && day <= 12) [day, month] = [month, day]; // US-Format
+    let hour = +(m[4] || 0);
+    if (m[7]) hour = (hour % 12) + (m[7].toUpperCase() === "PM" ? 12 : 0);
+    return makeDate(+m[3], month, day, hour, +(m[5] || 0), +(m[6] || 0));
+  }
+  if ((m = RE_YM.exec(s))) return makeDate(+m[1], +m[2], 1);
+  if ((m = RE_MY.exec(s))) return makeDate(+m[2], +m[1], 1);
+  return null;
+}
+
+/* Wandlerverhältnis: "100/5" → 20 · "150/5A" → 30 · "20" → 20
+   Strom- und Spannungswandler: "100/5 * 20kV/100V" → 20 × 200 = 4000 */
+function parseRatio(text) {
+  const s = String(text || "").trim().replace(/\s+/g, "").replace(/[×·]/g, "*").replace(/:/g, "/");
+  if (!s) return 1;
+  const side = (part) => {
+    const m = /^([\d.,]+)(kv|ka|v|a)?$/i.exec(part);
+    if (!m) return NaN;
+    const value = parseNumber(m[1]);
+    return m[2] && /^k/i.test(m[2]) ? value * 1000 : value;
+  };
+  let factor = 1;
+  for (const part of s.split("*")) {
+    const pieces = part.split("/");
+    if (!part || pieces.length > 2) return NaN;
+    const a = side(pieces[0]);
+    const b = pieces.length === 2 ? side(pieces[1]) : 1;
+    if (!(a > 0) || !(b > 0)) return NaN;
+    factor *= a / b;
+  }
+  return factor;
+}
+
+
+/* =========================================================
+   5. AUTOMATISCHE ERKENNUNG (Spalten, Einheit, Einspeisung)
+   ========================================================= */
+
+const DATE_HINT = /datum|date|zeit|time|stamp|von|from|beginn|start|tag|day|period/i;
+const EXPORT_HINT = /einspeis|feed.?in|\bexport|r(ü|ue)ck.?liefer|\blieferung|abgabe|erzeugung|produktion|production|generation|(^|[^\d.])2\.(8|7|29)\.\d/i;
+const IMPORT_HINT = /bezug|verbrauch|consumption|\bimport|usage|demand|wirkarbeit|energie|energy|kwh|(^|[^\d.])1\.(8|7|29)\.\d|z(ä|ae)hler|meter|leistung|power|load|\blast|wert|value|menge/i;
+const IGNORE_HINT = /(^|\W)(id|nr|nummer|number|index|status|qualit(ä|ae)t|quality|flag|code|z(ä|ae)hlpunkt|temperatur|temperature|preis|price|kosten|cost|eur|blindarbeit|kvarh)(\W|$)/i;
+
+function analyzeColumns(headers, rows) {
+  const sample = rows.length > 1500 ? rows.slice(0, 1500) : rows;
+  return headers.map((header, index) => {
+    let filled = 0, num = 0, date = 0, time = 0, neg = 0, pos = 0, clock = 0;
+    const unitHits = {};
+    for (const r of sample) {
+      const v = String(r[index] ?? "").trim();
+      if (!v) continue;
+      filled++;
+      const n = parseNumber(v);
+      if (Number.isFinite(n)) {
+        num++;
+        if (n < 0) neg++; else if (n > 0) pos++;
+        const u = /(mwh|kwh|wh|kw|w)$/i.exec(v.replace(/\s/g, ""));
+        if (u) { const k = u[1].toLowerCase(); unitHits[k] = (unitHits[k] || 0) + 1; }
+      }
+      if (parseDate(v)) { date++; if (/\d:\d\d/.test(v)) clock++; }
+      if (TIME_RE.test(v)) time++;
+    }
+    const ratio = (x) => (filled ? x / filled : 0);
+    return { index, header, filled, numRatio: ratio(num), dateRatio: ratio(date), timeRatio: ratio(time), clockRatio: date ? clock / date : 0, neg, pos, unitHits };
+  });
+}
+
+function detectColumns(src) {
+  const cols = src.columns;
+
+  // Zeitspalte
+  const dateCands = cols.filter((c) => c.dateRatio >= 0.8).sort((a, b) =>
+    (DATE_HINT.test(b.header) - DATE_HINT.test(a.header)) || (b.dateRatio - a.dateRatio) || (a.index - b.index));
+  src.dateCol = dateCands.length ? dateCands[0].index : -1;
+  src.timeCol = detectTimeColumn(src);
+
+  // Bezug- und Einspeise-Spalte
+  const used = new Set([src.dateCol, src.timeCol]);
+  const numeric = cols.filter((c) => !used.has(c.index) && c.numRatio >= 0.8 && c.filled > 0);
+  const exportCands = numeric.filter((c) => EXPORT_HINT.test(c.header));
+  const importCands = numeric
+    .filter((c) => !EXPORT_HINT.test(c.header) && !IGNORE_HINT.test(c.header))
+    .sort((a, b) => (IMPORT_HINT.test(b.header) - IMPORT_HINT.test(a.header)) || (a.index - b.index));
+  src.importCol = importCands.length ? importCands[0].index : -1;
+  src.exportCol = exportCands.length ? exportCands[0].index : -1;
+  if (src.importCol < 0 && src.exportCol < 0 && numeric.length) src.importCol = numeric[0].index;
+
+  detectValueTraits(src);
+}
+
+/* Separate Uhrzeit-Spalte (z. B. "Datum" + "Uhrzeit") */
+function detectTimeColumn(src) {
+  if (src.dateCol < 0 || src.columns[src.dateCol].clockRatio >= 0.5) return -1;
+  const cands = src.columns
+    .filter((c) => c.timeRatio >= 0.8 && c.index !== src.dateCol)
+    .sort((a, b) => Math.abs(a.index - src.dateCol) - Math.abs(b.index - src.dateCol));
+  return cands.length ? cands[0].index : -1;
+}
+
+/* Einheit und Vorzeichen-Logik passend zur gewählten Spalte */
+function detectValueTraits(src) {
+  const col = src.columns[src.importCol >= 0 ? src.importCol : src.exportCol];
+  src.detectedUnit = detectUnit(col);
+  const vc = src.importCol >= 0 ? src.columns[src.importCol] : null;
+  // Einspeisung als negative Werte in derselben Spalte?
+  src.detectedSigned = src.exportCol < 0 && !!vc && vc.neg >= Math.max(2, vc.filled * 0.01) && vc.pos > 0;
+  src.signedSplit = src.detectedSigned;
+}
+
+function detectUnit(col) {
+  if (!col) return "kWh";
+  const hd = col.header.toLowerCase();
+  if (/mwh/.test(hd)) return "MWh";
+  if (/kwh/.test(hd)) return "kWh";
+  if (/(^|[^km])wh\b/.test(hd)) return "Wh";
+  if (/\[kw\]|\(kw\)|(^|[^a-z])kw($|[^a-z])/.test(hd)) return "kW";
+  if (/\[w\]|\(w\)|watt|(^|\s)w$/.test(hd)) return "W";
+  const top = Object.entries(col.unitHits).sort((a, b) => b[1] - a[1])[0];
+  if (top) return { mwh: "MWh", kwh: "kWh", wh: "Wh", kw: "kW", w: "W" }[top[0]];
+  if (/leistung|power|demand|load|\blast/.test(hd)) return "kW";
+  return "kWh";
+}
+
+/* Zählerstand oder Intervallverbrauch? */
+function detectMode(values, header) {
+  if (/z(ä|ae)hlerstand|meter.?reading|reading|\bstand\b|kumul|cumulative/i.test(header)) return "cumulative";
+  if (/verbrauch|consumption|bezug|usage|einspeis|feed|leistung|power|intervall|interval/i.test(header)) return "interval";
+  if (values.length < 3) return "interval";
+  let rising = 0;
+  for (let i = 1; i < values.length; i++) if (values[i] >= values[i - 1]) rising++;
+  return rising / (values.length - 1) >= 0.97 && values[values.length - 1] > values[0] && values[0] >= 0
+    ? "cumulative" : "interval";
+}
+
+function medianStep(times) {
+  const diffs = [];
+  for (let i = 1; i < times.length; i++) {
+    const d = times[i] - times[i - 1];
+    if (d > 0) diffs.push(d);
+  }
+  if (!diffs.length) return 0;
+  diffs.sort((a, b) => a - b);
+  return diffs[Math.floor(diffs.length / 2)];
+}
+
+
+/* =========================================================
+   6. EINE DATEI AUSWERTEN
+   ========================================================= */
+
+function computeSource(src) {
+  src.error = "";
+  src.entries = [];
+  src.skipped = 0;
+  src.resets = 0;
+  src.gaps = 0;
+  src.dups = 0;
+  src.hasImport = src.hasExport = false;
+  src.impTotal = src.expTotal = 0;
+
+  const unit = src.unitSetting === "auto" ? src.detectedUnit : src.unitSetting;
+  const unitInfo = UNITS[unit];
+  src.unit = unit;
+  src.isPower = unitInfo.power;
+
+  src.factor = parseRatio(src.ratioText);
+  if (!Number.isFinite(src.factor) || src.factor <= 0) {
+    src.error = "Wandlerverhältnis ungültig. Beispiele: 100/5 · 20 · 100/5 * 20kV/100V";
+    return;
+  }
+  if (src.importCol < 0 && src.exportCol < 0) {
+    src.error = "Bitte eine Spalte für Verbrauch (Bezug) oder Einspeisung wählen.";
+    return;
+  }
+
+  // 1) Zeilen lesen
+  const recs = [];
+  for (let i = 0; i < src.rows.length; i++) {
+    const row = src.rows[i];
+    let date = null;
+    if (src.dateCol >= 0) {
+      date = parseDate(row[src.dateCol]);
+      if (date && src.timeCol >= 0) {
+        const m = TIME_RE.exec(String(row[src.timeCol] ?? "").trim());
+        if (m) date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), +m[1], +m[2], +(m[3] || 0));
+      }
+      if (!date) { src.skipped++; continue; }
+    }
+    const a = src.importCol >= 0 ? parseNumber(row[src.importCol]) : NaN;
+    const b = src.exportCol >= 0 ? parseNumber(row[src.exportCol]) : NaN;
+    if (!Number.isFinite(a) && !Number.isFinite(b)) { src.skipped++; continue; }
+    recs.push({ t: date ? date.getTime() : null, date, a, b, row: i });
+  }
+  if (src.dateCol >= 0) recs.sort((x, y) => x.t - y.t);
+  src.recordCount = recs.length;
+
+  // 2) Zeitliche Auflösung, Lücken, doppelte Zeitstempel
+  src.resolutionMs = 0;
+  if (src.dateCol >= 0) {
+    const times = recs.map((r) => r.t);
+    src.resolutionMs = medianStep(times);
+    for (let i = 1; i < times.length; i++) {
+      const d = times[i] - times[i - 1];
+      if (d === 0) src.dups++;
+      else if (src.resolutionMs && src.resolutionMs < 27 * DAY && d > src.resolutionMs * 1.8) src.gaps++;
+    }
+  }
+
+  // 3) Art der Werte
+  const key = src.importCol >= 0 ? "a" : "b";
+  const header = src.headers[src.importCol >= 0 ? src.importCol : src.exportCol] || "";
+  src.detectedMode = src.isPower ? "interval" : detectMode(recs.map((r) => r[key]).filter(Number.isFinite), header);
+  src.mode = src.isPower ? "interval" : (src.modeSetting === "auto" ? src.detectedMode : src.modeSetting);
+
+  // 4) Messintervall (für kW → kWh und für Leistungsberechnung)
+  const manual = parseNumber(src.intervalText);
+  src.intervalHours = Number.isFinite(manual) && manual > 0 ? manual / 60 : (src.resolutionMs ? src.resolutionMs / HOUR : null);
+  if (src.isPower && !src.intervalHours) {
+    src.error = "Für Leistungswerte (kW/W) wird das Messintervall benötigt – bitte in Minuten angeben.";
+    return;
+  }
+
+  const toKWh = (v) => (src.isPower ? v * unitInfo.scale * src.intervalHours : v * unitInfo.scale) * src.factor;
+
+  // 5) Verbrauch & Einspeisung je Zeitpunkt berechnen
+  const entries = [];
+  if (src.mode === "cumulative") {
+    // Zählerstände: Verbrauch = Differenz zum vorherigen Stand.
+    // Der Wert wird dem Beginn des Zeitraums zugeordnet.
+    let pa = null, pb = null;
+    for (const r of recs) {
+      let imp = null, exp = null, t = null, date = null, hours = null;
+      if (Number.isFinite(r.a)) {
+        if (pa) {
+          const d = r.a - pa.v;
+          if (d < 0) src.resets++;
+          else { imp = toKWh(d); t = pa.t; date = pa.date; hours = r.t !== null && pa.t !== null ? (r.t - pa.t) / HOUR : null; }
+        }
+        pa = { v: r.a, t: r.t, date: r.date };
+      }
+      if (Number.isFinite(r.b)) {
+        if (pb) {
+          const d = r.b - pb.v;
+          if (d < 0) src.resets++;
+          else {
+            exp = toKWh(d);
+            if (imp === null) { t = pb.t; date = pb.date; hours = r.t !== null && pb.t !== null ? (r.t - pb.t) / HOUR : null; }
+          }
+        }
+        pb = { v: r.b, t: r.t, date: r.date };
+      }
+      if (imp !== null || exp !== null) entries.push({ t, date, imp, exp, hours, row: r.row });
+    }
+  } else {
+    for (const r of recs) {
+      let imp = null, exp = null;
+      if (Number.isFinite(r.a)) {
+        if (src.signedSplit && src.exportCol < 0) {
+          imp = r.a > 0 ? toKWh(r.a) : 0;
+          exp = r.a < 0 ? toKWh(-r.a) : 0;
+        } else imp = toKWh(r.a);
+      }
+      if (Number.isFinite(r.b)) exp = toKWh(Math.abs(r.b));
+      entries.push({ t: r.t, date: r.date, imp, exp, hours: src.intervalHours, row: r.row });
+    }
+  }
+
+  src.entries = entries;
+  for (const e of entries) {
+    if (e.imp !== null) { src.hasImport = true; src.impTotal += e.imp; }
+    if (e.exp !== null) { src.hasExport = true; src.expTotal += e.exp; }
+  }
+  src.negImports = src.mode === "interval" && !src.signedSplit ? entries.filter((e) => e.imp !== null && e.imp < 0).length : 0;
+
+  if (src.dateCol >= 0 && recs.length) {
+    src.startMs = recs[0].t;
+    src.endMs = recs[recs.length - 1].t + (src.mode === "interval" && src.intervalHours ? src.intervalHours * HOUR : 0);
+  } else {
+    src.startMs = src.endMs = null;
+  }
+
+  if (!entries.length) {
+    src.error = src.mode === "cumulative"
+      ? "Für Zählerstände werden mindestens zwei gültige Messungen benötigt."
+      : "In den gewählten Spalten wurden keine gültigen Zahlenwerte gefunden.";
+  }
+}
+
+
+/* =========================================================
+   7. ALLE DATEIEN ZUSAMMENFÜHREN
+   ========================================================= */
+
+function computeCombined() {
+  const active = app.sources.filter((s) => s.enabled && !s.error && s.entries.length);
+  const c = { active, dated: active.length > 0 && active.every((s) => s.dateCol >= 0), timeline: [] };
+  if (!active.length) return c;
+
+  // Zeitachse: Werte gleicher Zeitpunkte werden addiert
+  if (c.dated) {
+    const map = new Map();
+    for (const s of active) {
+      for (const e of s.entries) {
+        let x = map.get(e.t);
+        if (!x) { x = { t: e.t, date: e.date, imp: null, exp: null, impP: null, expP: null, bySrc: {}, dur: 0 }; map.set(e.t, x); }
+        x.dur = Math.max(x.dur, e.hours > 0 ? e.hours * HOUR : s.resolutionMs);
+        if (e.imp !== null) {
+          x.imp = (x.imp || 0) + e.imp;
+          x.bySrc[s.id] = (x.bySrc[s.id] || 0) + e.imp;
+          if (e.hours > 0) x.impP = (x.impP || 0) + e.imp / e.hours;
+        }
+        if (e.exp !== null) {
+          x.exp = (x.exp || 0) + e.exp;
+          if (e.hours > 0) x.expP = (x.expP || 0) + e.exp / e.hours;
+        }
+      }
+    }
+    c.timeline = [...map.values()].sort((a, b) => a.t - b.t);
+  } else {
+    for (const s of active) {
+      for (const e of s.entries) {
+        c.timeline.push({ t: null, date: null, imp: e.imp, exp: e.exp, impP: null, expP: null, bySrc: e.imp !== null ? { [s.id]: e.imp } : {}, dur: 0 });
+      }
+    }
+  }
+
+  const tl = c.timeline;
+  c.count = tl.length;
+  c.hasImport = active.some((s) => s.hasImport);
+  c.hasExport = active.some((s) => s.hasExport);
+  c.impTotal = active.reduce((sum, s) => sum + s.impTotal, 0);
+  c.expTotal = active.reduce((sum, s) => sum + s.expTotal, 0);
+
+  // Zeitraum & Auflösung
+  if (c.dated) {
+    c.startMs = Math.min(...active.map((s) => s.startMs));
+    c.endMs = Math.max(...active.map((s) => s.endMs));
+    c.spanMs = Math.max(0, c.endMs - c.startMs);
+    const res = active.map((s) => s.resolutionMs).filter((r) => r > 0);
+    c.resolutionMs = res.length ? Math.min(...res) : 0;
+  } else {
+    c.spanMs = 0; c.resolutionMs = 0;
+  }
+  c.spanDays = c.spanMs / DAY;
+  // Tagesschnitt nur über Zeiträume, für die wirklich Daten vorliegen (Lücken zählen nicht)
+  const coveredDays = c.dated ? Math.min(c.spanMs, tl.reduce((sum, x) => sum + x.dur, 0)) / DAY : 0;
+  c.coveredDays = coveredDays;
+  c.impPerDay = coveredDays >= 1 ? c.impTotal / coveredDays : null;
+  c.expPerDay = coveredDays >= 1 ? c.expTotal / coveredDays : null;
+
+  // Leistungswerte nur sinnvoll bei Stunden- oder feineren Werten
+  c.powerOK = c.dated && c.resolutionMs > 0 && c.resolutionMs <= HOUR * 1.01;
+  if (c.powerOK) {
+    let peakImp = null, peakExp = null;
+    const loads = [];
+    for (const x of tl) {
+      if (x.impP !== null) {
+        if (!peakImp || x.impP > peakImp.v) peakImp = { v: x.impP, date: x.date };
+        if (x.impP > 0) loads.push(x.impP);
+      }
+      if (x.expP !== null && (!peakExp || x.expP > peakExp.v)) peakExp = { v: x.expP, date: x.date };
+    }
+    c.peakImp = peakImp;
+    c.peakExp = peakExp && peakExp.v > 0 ? peakExp : null;
+    c.baseLoad = loads.length ? quantile(loads, 0.05) : NaN;
+  }
+
+  // Tageswerte (nur vollständige Tage)
+  c.dayOK = c.dated && c.resolutionMs > 0 && c.resolutionMs <= DAY * 1.01;
+  c.days = [];
+  if (c.dayOK) {
+    c.days = bucketize(tl, "day").filter((b) => !b.empty && b.dur >= DAY * 0.9);
+    const withImp = c.days.filter((b) => b.hasImp);
+    if (withImp.length) {
+      c.maxDay = withImp.reduce((a, b) => (b.imp > a.imp ? b : a));
+      c.minDay = withImp.reduce((a, b) => (b.imp < a.imp ? b : a));
+    }
+  }
+
+  // Statistik für Ausreißer
+  const imps = tl.filter((x) => x.imp !== null).map((x) => x.imp);
+  if (imps.length) {
+    const mean = imps.reduce((a, b) => a + b, 0) / imps.length;
+    const sd = Math.sqrt(imps.reduce((a, b) => a + (b - mean) ** 2, 0) / imps.length);
+    c.impMean = mean;
+    c.outliers = imps.length >= 50 && sd > 0 ? imps.filter((v) => v > mean + 3 * sd).length : 0;
+  }
+
+  // Höchste Einzelwerte
+  c.topImp = tl.filter((x) => x.imp !== null).sort((a, b) => b.imp - a.imp).slice(0, 5);
+  return c;
+}
+
+
+/* =========================================================
+   8. ZEITRÄUME BÜNDELN (Tag / Woche / Monat)
+   ========================================================= */
+
+function bucketStart(d, gran) {
+  if (gran === "day") return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (gran === "week") {
+    const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    s.setDate(s.getDate() - ((s.getDay() + 6) % 7)); // Montag
+    return s;
+  }
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+function nextBucket(d, gran) {
+  if (gran === "day") return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  if (gran === "week") return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7);
+  return new Date(d.getFullYear(), d.getMonth() + 1, 1);
+}
+function isoWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return { week: Math.ceil(((d - yearStart) / DAY + 1) / 7), year: d.getUTCFullYear() };
+}
+
+/* Fasst die Zeitachse zusammen; fehlende Zeiträume werden als leer
+   eingefügt, damit Lücken im Diagramm sichtbar bleiben. */
+function bucketize(timeline, gran) {
+  const map = new Map();
+  for (const x of timeline) {
+    const start = bucketStart(x.date, gran);
+    const key = start.getTime();
+    let b = map.get(key);
+    if (!b) { b = { start, imp: 0, exp: 0, bySrc: {}, n: 0, dur: 0, hasImp: false, hasExp: false }; map.set(key, b); }
+    b.dur += x.dur || 0;
+    if (x.imp !== null) { b.imp += x.imp; b.hasImp = true; }
+    if (x.exp !== null) { b.exp += x.exp; b.hasExp = true; }
+    for (const id in x.bySrc) b.bySrc[id] = (b.bySrc[id] || 0) + x.bySrc[id];
+    b.n++;
+  }
+  if (!map.size) return [];
+  const keys = [...map.keys()].sort((a, b) => a - b);
+  const out = [];
+  let cur = new Date(keys[0]);
+  const last = keys[keys.length - 1];
+  for (let guard = 0; cur.getTime() <= last && guard < 6000; guard++) {
+    out.push(map.get(cur.getTime()) || { start: new Date(cur), imp: 0, exp: 0, bySrc: {}, n: 0, dur: 0, empty: true });
+    cur = nextBucket(cur, gran);
+  }
+  return out;
+}
+
+function bucketLabels(start, gran) {
+  const d = start.getDate(), m = start.getMonth(), y = start.getFullYear();
+  if (gran === "day") return { title: `${WEEKDAYS[start.getDay()]}, ${fmtDate(start)}`, short: `${pad(d)}.${pad(m + 1)}.` };
+  if (gran === "week") {
+    const w = isoWeek(start);
+    const end = new Date(y, m, d + 6);
+    return { title: `KW ${w.week}/${w.year} · ${pad(d)}.${pad(m + 1)}. – ${fmtDate(end)}`, short: `KW ${w.week}` };
+  }
+  return { title: `${MONTHS_LONG[m]} ${y}`, short: `${MONTHS[m]} ${String(y).slice(2)}` };
+}
+
+function availableGrans(c) {
+  const g = { raw: true, day: false, week: false, month: false };
+  if (!c.dated) return g;
+  const r = c.resolutionMs, d = c.spanDays;
+  g.day = r > 0 && r < DAY * 0.99 && d >= 1.5;
+  g.week = r > 0 && r < 6 * DAY && d >= 10;
+  g.month = r > 0 && r < 27 * DAY && d >= 40;
+  return g;
+}
+
+function autoGranularity(c) {
+  if (!c.dated) return "raw";
+  const av = availableGrans(c);
+  if (c.spanDays > 120 && av.month) return "month";
+  if (c.spanDays <= 14) return "raw";
+  if (av.day) return "day";
+  return "raw";
+}
+
+
+/* =========================================================
+   9. DIAGRAMM-DATEN (unabhängig von Bildschirm oder PDF)
+   ========================================================= */
+
+function sourceColorKey(s) { return "s" + s.colorIndex; }
+
+function tooltipRows(c, imp, exp, bySrc, nameOf) {
+  const rows = [];
+  if (c.active.length > 1 && bySrc) {
+    for (const s of c.active) if (bySrc[s.id] !== undefined) rows.push({ label: nameOf(s), value: fmtEnergy(bySrc[s.id]), color: sourceColorKey(s) });
+  }
+  if (c.hasImport) rows.push({ label: c.active.length > 1 ? "Bezug gesamt" : "Bezug", value: fmtEnergy(imp || 0), color: c.active.length > 1 ? null : sourceColorKey(c.active[0]) });
+  if (c.hasExport) {
+    rows.push({ label: "Einspeisung", value: fmtEnergy(exp || 0), color: "export" });
+    if (c.hasImport) rows.push({ label: "Netto", value: fmtEnergy((imp || 0) - (exp || 0)), color: null });
+  }
+  return rows;
+}
+
+function barItem(c, title, short, imp, exp, bySrc, nameOf, empty) {
+  const up = c.active.length > 1
+    ? c.active.map((s) => ({ v: bySrc[s.id] || 0, color: sourceColorKey(s) }))
+    : [{ v: imp || 0, color: sourceColorKey(c.active[0]) }];
+  const down = c.hasExport ? [{ v: exp || 0, color: "export" }] : [];
+  const rows = empty ? [{ label: "Keine Daten", value: "–", color: null }] : tooltipRows(c, imp, exp, bySrc, nameOf);
+  return { title, short, up, down, rows };
+}
+
+function mainChartSpec(c, gran, nameOf) {
+  const tl = c.timeline;
+  if (!tl.length) return null;
+
+  if (gran !== "raw" && c.dated) {
+    const buckets = bucketize(tl, gran);
+    return {
+      kind: "bar",
+      items: buckets.map((b) => {
+        const l = bucketLabels(b.start, gran);
+        return barItem(c, l.title, l.short, b.imp, b.exp, b.bySrc, nameOf, b.empty);
+      })
+    };
+  }
+
+  // wenige Tages-/Monatswerte → Balken
+  if (tl.length <= 62 && (!c.dated || c.resolutionMs >= DAY * 0.99)) {
+    const monthly = c.resolutionMs >= 27 * DAY;
+    return {
+      kind: "bar",
+      items: tl.map((x, i) => {
+        let title = `Messwert ${i + 1}`, short = `#${i + 1}`;
+        if (x.date) {
+          title = monthly ? `${MONTHS_LONG[x.date.getMonth()]} ${x.date.getFullYear()}` : `${WEEKDAYS[x.date.getDay()]}, ${fmtDate(x.date)}`;
+          short = monthly ? `${MONTHS[x.date.getMonth()]} ${String(x.date.getFullYear()).slice(2)}` : `${pad(x.date.getDate())}.${pad(x.date.getMonth() + 1)}.`;
+        }
+        return barItem(c, title, short, x.imp, x.exp, x.bySrc, nameOf, false);
+      })
+    };
+  }
+
+  // sonst Linie
+  const colorKey = c.active.length > 1 ? "s0" : sourceColorKey(c.active[0]);
+  const series = [];
+  if (c.hasImport) series.push({ ys: tl.map((x) => x.imp), color: colorKey, area: true, sign: 1 });
+  if (c.hasExport) series.push({ ys: tl.map((x) => x.exp), color: "export", area: true, sign: -1 });
+  const spanMs = c.dated ? tl[tl.length - 1].t - tl[0].t : 0;
+  return {
+    kind: "line",
+    xType: c.dated ? "time" : "index",
+    xs: c.dated ? tl.map((x) => x.t) : tl.map((_, i) => i),
+    series,
+    gap: c.dated && c.resolutionMs ? c.resolutionMs * 2.5 : null,
+    xLabel: (x) => {
+      if (!c.dated) return "#" + (Math.round(x) + 1);
+      const d = new Date(x);
+      if (spanMs <= 2 * DAY) return fmtTime(d);
+      if (spanMs <= 150 * DAY) return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.`;
+      return `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+    },
+    tooltip: (i) => {
+      const x = tl[i];
+      const title = x.date ? (c.resolutionMs < DAY * 0.99 ? fmtDateTime(x.date) : `${WEEKDAYS[x.date.getDay()]}, ${fmtDate(x.date)}`) : `Messwert ${i + 1}`;
+      const rows = tooltipRows(c, x.imp, x.exp, x.bySrc, nameOf);
+      if (x.impP !== null && c.powerOK) rows.push({ label: "Ø Leistung", value: fmtPower(x.impP), color: null });
+      return { title, rows };
+    }
+  };
+}
+
+function hourProfileSpec(c) {
+  if (!c.powerOK) return null;
+  const si = Array(24).fill(0), ni = Array(24).fill(0), se = Array(24).fill(0), ne = Array(24).fill(0);
+  for (const x of c.timeline) {
+    const hr = x.date.getHours();
+    if (x.impP !== null) { si[hr] += x.impP; ni[hr]++; }
+    if (x.expP !== null) { se[hr] += x.expP; ne[hr]++; }
+  }
+  return {
+    kind: "bar",
+    items: si.map((_, hr) => {
+      const imp = ni[hr] ? si[hr] / ni[hr] : 0;
+      const exp = ne[hr] ? se[hr] / ne[hr] : 0;
+      const rows = [];
+      if (c.hasImport) rows.push({ label: "Ø Bezug", value: fmtPower(imp), color: "s0" });
+      if (c.hasExport) rows.push({ label: "Ø Einspeisung", value: fmtPower(exp), color: "export" });
+      return {
+        title: `${pad(hr)}:00 – ${pad((hr + 1) % 24)}:00 Uhr`,
+        short: String(hr),
+        up: c.hasImport ? [{ v: imp, color: "s0" }] : [],
+        down: c.hasExport ? [{ v: exp, color: "export" }] : [],
+        rows
+      };
+    })
+  };
+}
+
+function weekdaySpec(c) {
+  if (!c.dayOK || c.days.length < 7) return null;
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const names = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+  return {
+    kind: "bar",
+    items: order.map((wd, k) => {
+      const days = c.days.filter((b) => b.start.getDay() === wd);
+      const imp = days.length ? days.reduce((a, b) => a + b.imp, 0) / days.length : 0;
+      const exp = days.length ? days.reduce((a, b) => a + b.exp, 0) / days.length : 0;
+      const rows = [];
+      if (c.hasImport) rows.push({ label: "Ø Bezug", value: fmtEnergy(imp), color: "s0" });
+      if (c.hasExport) rows.push({ label: "Ø Einspeisung", value: fmtEnergy(exp), color: "export" });
+      rows.push({ label: "Ausgewertete Tage", value: String(days.length), color: null });
+      return {
+        title: names[k],
+        short: WEEKDAYS[wd],
+        up: c.hasImport ? [{ v: imp, color: "s0" }] : [],
+        down: c.hasExport ? [{ v: exp, color: "export" }] : [],
+        rows
+      };
+    })
+  };
+}
+
+
+/* =========================================================
+   10. DIAGRAMM-LAYOUT
+   Berechnet Linien, Balken und Beschriftungen. Dasselbe Layout
+   wird für den Bildschirm (SVG) und das PDF verwendet.
+   ========================================================= */
+
+function niceScale(min, max, count) {
+  if (!(max > min)) {
+    if (max > 0) min = 0; else if (min < 0) max = 0; else max = 1;
+    if (!(max > min)) max = min + 1;
+  }
+  const raw = (max - min) / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const r = raw / mag;
+  const step = (r <= 1 ? 1 : r <= 2 ? 2 : r <= 5 ? 5 : 10) * mag;
+  const lo = Math.floor(min / step + 1e-9) * step;
+  const hi = Math.ceil(max / step - 1e-9) * step;
+  const ticks = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.abs(v) < step / 1e6 ? 0 : +v.toPrecision(12));
+  return { min: lo, max: hi > lo ? hi : lo + step, step, ticks };
+}
+
+function downsample(indices, fx, fy, width) {
+  if (indices.length <= width * 2) return indices.map((i) => [fx(i), fy(i)]);
+  // pro Pixelspalte nur Minimum und Maximum behalten – Spitzen bleiben sichtbar
+  const out = [];
+  let col = null, lo = null, hi = null;
+  const flush = () => {
+    if (col === null) return;
+    const [a, b] = lo.i <= hi.i ? [lo, hi] : [hi, lo];
+    out.push([a.x, a.y]);
+    if (a !== b) out.push([b.x, b.y]);
+  };
+  for (const i of indices) {
+    const x = fx(i), y = fy(i), c = Math.floor(x);
+    if (c !== col) { flush(); col = c; lo = hi = { i, x, y }; }
+    else { if (y > lo.y) lo = { i, x, y }; if (y < hi.y) hi = { i, x, y }; }
+  }
+  flush();
+  return out;
+}
+
+function nearestIndex(arr, value) {
+  let lo = 0, hi = arr.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] < value) lo = mid; else hi = mid;
+  }
+  return Math.abs(arr[lo] - value) <= Math.abs(arr[hi] - value) ? lo : hi;
+}
+
+const sumV = (list) => list.reduce((a, p) => a + (p.v > 0 ? p.v : 0), 0);
+
+function layoutChart(spec, W, H, theme) {
+  const fs = theme.font;
+  const prims = [];
+  const color = (key) => (key === "export" ? theme.export : theme.series[(+String(key).slice(1) || 0) % theme.series.length]);
+
+  // Wertebereich
+  let lo = 0, hi = 0;
+  if (spec.kind === "bar") {
+    for (const it of spec.items) { hi = Math.max(hi, sumV(it.up)); lo = Math.min(lo, -sumV(it.down)); }
+  } else {
+    for (const s of spec.series) for (const y of s.ys) {
+      if (y === null) continue;
+      const v = s.sign * y;
+      if (v > hi) hi = v;
+      if (v < lo) lo = v;
+    }
+  }
+  const sc = niceScale(lo, hi, H < 200 ? 4 : 5);
+  const dec = sc.step >= 1 ? 0 : Math.min(4, Math.ceil(-Math.log10(sc.step) - 1e-9));
+  const tickText = sc.ticks.map((t) => fmtNum(t, dec));
+  const M = {
+    top: fs * 1.2,
+    right: fs * 1.2,
+    bottom: fs * 2.6,
+    left: Math.ceil(Math.max(...tickText.map((t) => t.length)) * fs * 0.6 + fs * 1.3)
+  };
+  const iw = Math.max(20, W - M.left - M.right);
+  const ih = Math.max(20, H - M.top - M.bottom);
+  const yPos = (v) => M.top + ih - ((v - sc.min) / (sc.max - sc.min)) * ih;
+  const y0 = yPos(0);
+
+  // Raster & Y-Beschriftung
+  sc.ticks.forEach((t, i) => {
+    const y = yPos(t);
+    prims.push({ type: "line", x1: M.left, y1: y, x2: M.left + iw, y2: y, stroke: t === 0 ? theme.zero : theme.grid, width: t === 0 ? 1 : 0.6 });
+    prims.push({ type: "text", x: M.left - fs * 0.6, y: y + fs * 0.35, text: tickText[i], anchor: "end", size: fs, fill: theme.label });
+  });
+
+  let hit;
+  if (spec.kind === "bar") {
+    const n = spec.items.length;
+    const step = iw / n;
+    const bw = Math.max(0.6, Math.min(step * 0.74, fs * 4.4));
+    const radius = Math.min(2.5, bw / 4);
+    spec.items.forEach((it, i) => {
+      const cx = M.left + step * (i + 0.5);
+      let acc = 0;
+      for (const p of it.up) {
+        if (!(p.v > 0)) continue;
+        const ya = yPos(acc), yb = yPos(acc + p.v);
+        prims.push({ type: "rect", x: cx - bw / 2, y: yb, w: bw, h: Math.max(ya - yb, 0.4), fill: color(p.color), r: radius });
+        acc += p.v;
+      }
+      acc = 0;
+      for (const p of it.down) {
+        if (!(p.v > 0)) continue;
+        const ya = yPos(-acc), yb = yPos(-(acc + p.v));
+        prims.push({ type: "rect", x: cx - bw / 2, y: ya, w: bw, h: Math.max(yb - ya, 0.4), fill: color(p.color), r: radius });
+        acc += p.v;
+      }
+    });
+    const maxLabels = Math.max(1, Math.floor(iw / (fs * 5.2)));
+    const every = Math.ceil(n / maxLabels);
+    for (let i = 0; i < n; i += every) {
+      prims.push({ type: "text", x: M.left + step * (i + 0.5), y: M.top + ih + fs * 1.7, text: spec.items[i].short, anchor: "middle", size: fs, fill: theme.label });
+    }
+    hit = (px) => {
+      const i = clamp(Math.floor((px - M.left) / step), 0, n - 1);
+      return { i, x: M.left + step * (i + 0.5), y: yPos(sumV(spec.items[i].up)), band: { x: M.left + step * i, w: step }, tip: spec.items[i] };
+    };
+  } else {
+    const xs = spec.xs, n = xs.length;
+    const x0 = xs[0], span = xs[n - 1] - x0 || 1;
+    const xPos = (x) => (n === 1 ? M.left + iw / 2 : M.left + ((x - x0) / span) * iw);
+    for (const s of spec.series) {
+      const segments = [];
+      let seg = [], prevX = null;
+      for (let i = 0; i < n; i++) {
+        if (s.ys[i] === null) { if (seg.length) segments.push(seg); seg = []; prevX = null; continue; }
+        if (prevX !== null && spec.gap && xs[i] - prevX > spec.gap) { segments.push(seg); seg = []; }
+        seg.push(i); prevX = xs[i];
+      }
+      if (seg.length) segments.push(seg);
+      for (const sg of segments) {
+        const pts = downsample(sg, (i) => xPos(xs[i]), (i) => yPos(s.sign * s.ys[i]), iw);
+        if (pts.length === 1) pts.push([pts[0][0] + 0.8, pts[0][1]]);
+        if (s.area) prims.push({ type: "path", pts: [...pts, [pts[pts.length - 1][0], y0], [pts[0][0], y0]], closed: true, fill: color(s.color), alpha: true });
+        prims.push({ type: "path", pts, stroke: color(s.color), width: theme.lineWidth });
+      }
+    }
+    const maxLabels = Math.max(2, Math.floor(iw / (fs * 7)));
+    for (let k = 0; k < maxLabels; k++) {
+      const x = n === 1 ? x0 : x0 + (span * k) / (maxLabels - 1);
+      prims.push({ type: "text", x: xPos(x), y: M.top + ih + fs * 1.7, text: spec.xLabel(x), anchor: k === 0 ? "start" : k === maxLabels - 1 ? "end" : "middle", size: fs, fill: theme.label });
+    }
+    hit = (px) => {
+      const target = x0 + ((px - M.left) / iw) * span;
+      const i = nearestIndex(xs, target);
+      const s0 = spec.series[0];
+      const yv = s0 && s0.ys[i] !== null ? s0.sign * s0.ys[i] : 0;
+      return { i, x: xPos(xs[i]), y: yPos(yv), tip: spec.tooltip(i) };
+    };
+  }
+  return { prims, M, iw, ih, W, H, hit, kind: spec.kind, color };
+}
+
+
+/* =========================================================
+   11. DIAGRAMME AM BILDSCHIRM (SVG, interaktiv)
+   ========================================================= */
+
+const chartRegistry = new Map();
+const resizeObserver = new ResizeObserver((entries) => {
+  for (const entry of entries) {
+    const reg = chartRegistry.get(entry.target);
+    const width = Math.floor(entry.contentRect.width);
+    if (reg && width > 0 && width !== reg.width) {
+      cancelAnimationFrame(reg.frame);
+      reg.frame = requestAnimationFrame(() => drawChart(entry.target, reg.spec, reg.opts));
+    }
+  }
+});
+
+const r2 = (v) => Math.round(v * 10) / 10;
+
+function primToSvg(p) {
+  if (p.type === "line") return svgEl("line", { x1: r2(p.x1), y1: r2(p.y1), x2: r2(p.x2), y2: r2(p.y2), stroke: p.stroke, "stroke-width": p.width });
+  if (p.type === "rect") return svgEl("rect", { x: r2(p.x), y: r2(p.y), width: r2(p.w), height: r2(p.h), rx: p.r || 0, fill: p.fill });
+  if (p.type === "text") {
+    const t = svgEl("text", { x: r2(p.x), y: r2(p.y), "text-anchor": p.anchor, "font-size": p.size, fill: p.fill });
+    t.textContent = p.text;
+    return t;
+  }
+  const d = p.pts.map((q, i) => (i ? "L" : "M") + r2(q[0]) + "," + r2(q[1])).join("") + (p.closed ? "Z" : "");
+  return svgEl("path", {
+    d, fill: p.fill || "none", "fill-opacity": p.alpha ? 0.16 : null,
+    stroke: p.stroke || "none", "stroke-width": p.width || null, "stroke-linejoin": "round", "stroke-linecap": "round"
+  });
+}
+
+function fillTooltip(tip, data, layout) {
+  tip.textContent = "";
+  tip.append(h("div", { class: "tt-title", text: data.title }));
+  for (const row of data.rows) {
+    const label = h("span", {}, row.color ? h("i", { style: `background:${layout.color(row.color)}` }) : null, row.label);
+    tip.append(h("div", { class: "tt-row" }, label, h("b", { text: row.value })));
+  }
+}
+
+function drawChart(box, spec, opts = {}) {
+  box.textContent = "";
+  const empty = !spec || (spec.kind === "bar" ? !spec.items.length : !spec.xs.length);
+  if (empty) {
+    chartRegistry.delete(box);
+    box.append(h("p", { class: "chart-empty", text: opts.empty || "Für dieses Diagramm reichen die Daten nicht aus." }));
+    return;
+  }
+  const W = Math.max(260, Math.floor(box.clientWidth || 600));
+  const H = opts.height ? opts.height(W) : W < 560 ? 250 : 330;
+  const L = layoutChart(spec, W, H, THEMES.screen);
+
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": opts.label || "Diagramm" });
+  const band = svgEl("rect", { class: "hover-band", y: L.M.top, height: L.ih, width: 0, visibility: "hidden" });
+  svg.append(band);
+  for (const p of L.prims) svg.append(primToSvg(p));
+  const guide = svgEl("line", { class: "hover-line", y1: L.M.top, y2: L.M.top + L.ih, visibility: "hidden" });
+  const dot = svgEl("circle", { class: "hover-dot", r: 4.5, visibility: "hidden" });
+  const overlay = svgEl("rect", { x: L.M.left, y: 0, width: L.iw, height: H, fill: "transparent" });
+  svg.append(guide, dot, overlay);
+  box.append(svg);
+
+  const tip = h("div", { class: "chart-tooltip", "aria-hidden": "true" });
+  box.append(tip);
+
+  const show = (evt) => {
+    const rect = svg.getBoundingClientRect();
+    const px = ((evt.clientX - rect.left) * W) / rect.width;
+    const res = L.hit(px);
+    if (L.kind === "bar") {
+      band.setAttribute("x", r2(res.band.x));
+      band.setAttribute("width", r2(res.band.w));
+      band.setAttribute("visibility", "visible");
+    } else {
+      guide.setAttribute("x1", r2(res.x)); guide.setAttribute("x2", r2(res.x));
+      guide.setAttribute("visibility", "visible");
+      dot.setAttribute("cx", r2(res.x)); dot.setAttribute("cy", r2(res.y));
+      dot.setAttribute("visibility", "visible");
+    }
+    fillTooltip(tip, res.tip, L);
+    tip.classList.add("visible");
+    const sx = rect.width / W, sy = rect.height / H;
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = clamp(res.x * sx, tw / 2 + 2, rect.width - tw / 2 - 2) + "px";
+    tip.style.top = Math.max(res.y * sy, th + 14) + "px";
+  };
+  const hide = () => {
+    tip.classList.remove("visible");
+    for (const el of [band, guide, dot]) el.setAttribute("visibility", "hidden");
+  };
+  overlay.addEventListener("pointermove", show);
+  overlay.addEventListener("pointerdown", show);
+  overlay.addEventListener("pointerleave", hide);
+
+  const prev = chartRegistry.get(box);
+  chartRegistry.set(box, { spec, opts, width: Math.floor(box.clientWidth), frame: prev ? prev.frame : 0 });
+  resizeObserver.observe(box);
+}
+
+function legendItems(c, nameOf, theme, stacked) {
+  const items = [];
+  const color = (key) => (key === "export" ? theme.export : theme.series[(+key.slice(1)) % theme.series.length]);
+  if (c.hasImport) {
+    if (c.active.length > 1 && stacked) {
+      for (const s of c.active) items.push({ label: `Bezug · ${nameOf(s)}`, color: color(sourceColorKey(s)) });
+    } else {
+      const key = c.active.length > 1 ? "s0" : sourceColorKey(c.active[0]);
+      items.push({ label: c.active.length > 1 ? "Bezug (alle Dateien)" : "Verbrauch (Bezug)", color: color(key) });
+    }
+  }
+  if (c.hasExport) items.push({ label: "Einspeisung (nach unten)", color: theme.export });
+  return items;
+}
+
+
+/* =========================================================
+   12. KENNZAHLEN & HINWEISE (für Dashboard und PDF)
+   ========================================================= */
+
+function kpiList(c) {
+  const k = [];
+  const range = c.dated ? fmtRange(c.startMs, c.endMs) : "ohne Zeitangaben";
+  const needPower = "benötigt 15-Min.- oder Stundenwerte";
+  const needDays = "benötigt vollständige Tage";
+  if (c.hasImport) {
+    k.push({ label: "Verbrauch (Bezug)", value: fmtEnergy(c.impTotal), sub: range });
+    k.push({ label: "Ø Verbrauch pro Tag", value: c.impPerDay !== null ? fmtEnergy(c.impPerDay) : "–", sub: c.impPerDay !== null ? `≈ ${fmtInt(c.impPerDay * 365)} kWh/Jahr hochgerechnet` : "benötigt mind. 1 Tag mit Zeitangaben" });
+    k.push({ label: "Spitzenleistung", value: c.powerOK && c.peakImp ? fmtPower(c.peakImp.v) : "–", sub: c.powerOK && c.peakImp ? fmtDateTime(c.peakImp.date) : needPower, accent: "amber" });
+    k.push({ label: "Grundlast", value: c.powerOK && Number.isFinite(c.baseLoad) ? fmtPower(c.baseLoad) : "–", sub: c.powerOK ? "dauerhafte Mindestlast (5-%-Wert)" : needPower });
+    k.push({ label: "Höchster Tagesverbrauch", value: c.maxDay ? fmtEnergy(c.maxDay.imp) : "–", sub: c.maxDay ? `${WEEKDAYS[c.maxDay.start.getDay()]}, ${fmtDate(c.maxDay.start)}` : needDays, accent: "amber" });
+    k.push({ label: "Niedrigster Tagesverbrauch", value: c.minDay ? fmtEnergy(c.minDay.imp) : "–", sub: c.minDay ? `${WEEKDAYS[c.minDay.start.getDay()]}, ${fmtDate(c.minDay.start)}` : needDays });
+  }
+  k.push({ label: "Analysezeitraum", value: c.dated ? fmtSpan(c.spanMs) : "–", sub: c.dated ? range : "keine Zeitspalte gewählt" });
+  k.push({ label: "Messwerte", value: fmtInt(c.count), sub: [describeResolution(c.resolutionMs), `${c.active.length} ${c.active.length === 1 ? "Datei" : "Dateien"}`].filter(Boolean).join(" · ") });
+  if (c.hasExport) {
+    const net = c.impTotal - c.expTotal;
+    k.push({ label: "Einspeisung", value: fmtEnergy(c.expTotal), sub: c.expPerDay !== null ? `Ø ${fmtEnergy(c.expPerDay)} pro Tag` : "ins Netz geliefert", accent: "green" });
+    k.push({ label: "Spitzen-Einspeiseleistung", value: c.powerOK && c.peakExp ? fmtPower(c.peakExp.v) : "–", sub: c.powerOK && c.peakExp ? fmtDateTime(c.peakExp.date) : needPower, accent: "green" });
+    k.push({ label: "Netto-Bilanz", value: fmtEnergy(net), sub: net >= 0 ? "Bezug überwiegt" : "Einspeisung überwiegt", accent: net < 0 ? "green" : "" });
+    k.push({ label: "Einspeisung / Bezug", value: c.impTotal > 0 ? fmtNum((c.expTotal / c.impTotal) * 100, 1) + " %" : "–", sub: "Verhältnis der Energiemengen", accent: "green" });
+  }
+  return k;
+}
+
+function buildHints(c, nameOf) {
+  const list = [];
+  if (c.hasExport && c.hasImport) list.push({ type: "ok", text: "Verbrauch (Bezug) und Einspeisung erkannt – beide werden getrennt ausgewertet." });
+  else if (c.hasExport) list.push({ type: "ok", text: "Nur Einspeisung erkannt – kein Verbrauch in den Daten." });
+  else list.push({ type: "ok", text: "Nur Verbrauch erkannt – keine Einspeisung in den Daten." });
+
+  for (const s of app.sources) {
+    const n = nameOf(s);
+    if (!s.enabled) { list.push({ type: "info", text: `${n} ist deaktiviert und nicht in der Auswertung enthalten.` }); continue; }
+    if (s.error) { list.push({ type: "warn", text: `${n}: ${s.error}` }); continue; }
+    if (s.mode === "cumulative") list.push({ type: "info", text: `${n}: Zählerstände – der Verbrauch wurde aus der Differenz aufeinanderfolgender Stände berechnet.` });
+    if (s.isPower) list.push({ type: "info", text: `${n}: Leistungswerte (${s.unit}) wurden mit einem Intervall von ${fmtNum(s.intervalHours * 60, 0)} Minuten in kWh umgerechnet.` });
+    if (s.factor !== 1) list.push({ type: "info", text: `${n}: Wandlerfaktor ${fmtFactor(s.factor)} angewendet.` });
+    if (s.signedSplit && s.exportCol < 0) list.push({ type: "info", text: `${n}: Negative Werte wurden als Einspeisung gewertet.` });
+    if (s.skipped) list.push({ type: "warn", text: `${n}: ${fmtInt(s.skipped)} Zeilen übersprungen (leer, ungültige Zahl oder ungültiges Datum).` });
+    if (s.resets) list.push({ type: "warn", text: `${n}: ${fmtInt(s.resets)}× ist ein Zählerstand gesunken (z. B. Zählertausch) – diese Stellen wurden nicht gewertet.` });
+    if (s.negImports) list.push({ type: "warn", text: `${n}: ${fmtInt(s.negImports)} negative Verbrauchswerte. Falls das Einspeisung ist, aktiviere „Negative Werte = Einspeisung“.` });
+    if (s.gaps) list.push({ type: "warn", text: `${n}: ${fmtInt(s.gaps)} Lücken in der Zeitreihe – fehlende Zeiträume fließen nicht in die Summen ein.` });
+    if (s.dups) list.push({ type: "warn", text: `${n}: ${fmtInt(s.dups)} doppelte Zeitstempel gefunden.` });
+  }
+
+  // Überschneidende Zeiträume mehrerer Dateien
+  const dated = c.active.filter((s) => s.dateCol >= 0);
+  for (let i = 0; i < dated.length; i++) {
+    for (let j = i + 1; j < dated.length; j++) {
+      const a = dated[i], b = dated[j];
+      if (a.startMs < b.endMs && b.startMs < a.endMs) {
+        list.push({ type: "info", text: `${nameOf(a)} und ${nameOf(b)} überschneiden sich zeitlich – die Werte werden addiert (richtig bei mehreren Zählern, falsch bei doppelt geladenen Daten).` });
+      }
+    }
+  }
+  if (c.outliers) list.push({ type: "info", text: `${fmtInt(c.outliers)} Verbrauchswerte liegen sehr deutlich über dem Durchschnitt (mehr als 3 Standardabweichungen).` });
+  if (!c.dated && c.active.length) list.push({ type: "info", text: "Mindestens eine Datei hat keine Zeitspalte – Werte werden in Datei-Reihenfolge ausgewertet, Tages- und Leistungswerte sind nicht verfügbar." });
+  return list;
+}
+
+function monthRows(c) {
+  if (!c.dated) return [];
+  const months = bucketize(c.timeline, "month");
+  return months.filter((b) => !b.empty).map((b) => {
+    const daysInMonth = new Date(b.start.getFullYear(), b.start.getMonth() + 1, 0).getDate();
+    const covered = Math.min(daysInMonth, b.dur / DAY);
+    return {
+      label: `${MONTHS_LONG[b.start.getMonth()]} ${b.start.getFullYear()}`,
+      imp: b.imp, exp: b.exp,
+      perDay: covered >= 1 ? b.imp / covered : null,
+      partial: covered < daysInMonth * 0.97
+    };
+  });
+}
+
+
+/* =========================================================
+   13. DASHBOARD DARSTELLEN
+   ========================================================= */
+
+const screenName = (s) => `„${s.name}“`;
+
+function refreshDashboard() {
+  const hasSources = app.sources.length > 0;
+  $("dashboard").hidden = !hasSources;
+  const c = (app.combined = computeCombined());
+  const has = c.active.length > 0;
+  $("results").hidden = !has;
+  $("noResults").hidden = has || !hasSources;
+  $("headerPdfButton").hidden = !has;
+  $("pdfButton").disabled = !has;
+  renderDetectBanner(c);
+  if (!has) return;
+
+  const av = availableGrans(c);
+  if (!app.granManual || !av[app.granularity]) app.granularity = autoGranularity(c);
+
+  renderKPIs(c);
+  renderMainChart(c);
+  renderProfiles(c);
+  renderTables(c);
+  renderInsights(c);
+  renderPreview();
+}
+
+function renderDetectBanner(c) {
+  const box = $("detectBanner");
+  box.textContent = "";
+  if (!app.sources.length) return;
+  let title, text;
+  if (!c.active.length) {
+    title = "Noch keine auswertbaren Daten";
+    text = "Wähle bei den Dateien die passenden Spalten aus.";
+  } else if (c.hasExport && c.hasImport) {
+    title = "Erkannt: Verbrauch (Bezug) und Einspeisung";
+    text = "Beide Energieflüsse werden getrennt ausgewertet. Stimmt das nicht, ändere unten die Spalten.";
+  } else if (c.hasExport) {
+    title = "Erkannt: nur Einspeisung";
+    text = "Falls die Datei auch Verbrauch enthält, wähle unten die Spalte „Verbrauch (Bezug)“.";
+  } else {
+    title = "Erkannt: nur Verbrauch – keine Einspeisung";
+    text = "Enthält die Datei doch Einspeisung, wähle unten die Spalte „Einspeisung“ oder aktiviere „Negative Werte = Einspeisung“.";
+  }
+  box.className = "detect-banner" + (c.hasExport ? " has-export" : "");
+  box.append(h("i", { class: "dot", "aria-hidden": "true" }), h("div", {}, h("strong", { text: title }), h("span", { text: text })));
+}
+
+function renderKPIs(c) {
+  const grid = $("kpiGrid");
+  grid.textContent = "";
+  for (const k of kpiList(c)) {
+    grid.append(h("div", { class: "stat" + (k.accent ? " accent-" + k.accent : "") },
+      h("span", { class: "stat-label", text: k.label }),
+      h("strong", { class: "stat-value", text: k.value }),
+      h("span", { class: "stat-sub", text: k.sub || "" })
+    ));
+  }
+}
+
+function granDescription(c, gran) {
+  if (gran === "day") return "Tagessummen";
+  if (gran === "week") return "Wochensummen (Montag bis Sonntag)";
+  if (gran === "month") return "Monatssummen";
+  return describeResolution(c.resolutionMs) || "Einzelwerte in Datei-Reihenfolge";
+}
+
+function renderMainChart(c) {
+  const av = availableGrans(c);
+  document.querySelectorAll("#granButtons button").forEach((b) => {
+    b.disabled = !av[b.dataset.gran];
+    b.setAttribute("aria-pressed", String(b.dataset.gran === app.granularity));
+  });
+  let sub = `${granDescription(c, app.granularity)} in kWh`;
+  if (c.hasExport) sub += " · Bezug nach oben, Einspeisung nach unten";
+  if (app.granularity === "week" || app.granularity === "month") sub += " · erster/letzter Zeitraum ggf. unvollständig";
+  $("chartSubtitle").textContent = sub;
+
+  const spec = mainChartSpec(c, app.granularity, screenName);
+  const legend = $("mainLegend");
+  legend.textContent = "";
+  for (const item of legendItems(c, screenName, THEMES.screen, spec && spec.kind === "bar")) {
+    legend.append(h("span", {}, h("i", { style: `background:${item.color}` }), item.label));
+  }
+  drawChart($("mainChart"), spec, { label: "Verlauf von Verbrauch und Einspeisung" });
+}
+
+function renderProfiles(c) {
+  const hour = hourProfileSpec(c);
+  const week = weekdaySpec(c);
+  $("profilePanel").hidden = !hour && !week;
+  $("hourCard").hidden = !hour;
+  $("weekdayCard").hidden = !week;
+  const small = { height: (w) => (w < 420 ? 210 : 240) };
+  if (hour) drawChart($("hourChart"), hour, { ...small, label: "Durchschnittliches Tagesprofil" });
+  if (week) drawChart($("weekdayChart"), week, { ...small, label: "Durchschnitt nach Wochentag" });
+}
+
+function renderTables(c) {
+  const months = monthRows(c);
+  $("monthWrap").hidden = !months.length;
+  $("sourceTableWrap").hidden = c.active.length < 2;
+  $("breakdownPanel").hidden = !months.length && c.active.length < 2;
+
+  if (months.length) {
+    const table = $("monthTable");
+    table.textContent = "";
+    const head = ["Monat"];
+    if (c.hasImport) head.push("Bezug", "Ø pro Tag");
+    if (c.hasExport) head.push("Einspeisung", "Netto");
+    table.append(h("thead", {}, h("tr", {}, head.map((t, i) => h("th", { class: i ? "right" : "", text: t })))));
+    const body = h("tbody");
+    for (const m of months) {
+      const cells = [m.label + (m.partial ? " *" : "")];
+      if (c.hasImport) cells.push(fmtEnergy(m.imp), m.perDay !== null ? fmtEnergy(m.perDay) : "–");
+      if (c.hasExport) cells.push(fmtEnergy(m.exp), fmtEnergy(m.imp - m.exp));
+      body.append(h("tr", {}, cells.map((t, i) => h("td", { class: i ? "right" : "", text: t }))));
+    }
+    const total = ["Summe"];
+    if (c.hasImport) total.push(fmtEnergy(c.impTotal), c.impPerDay !== null ? fmtEnergy(c.impPerDay) : "–");
+    if (c.hasExport) total.push(fmtEnergy(c.expTotal), fmtEnergy(c.impTotal - c.expTotal));
+    body.append(h("tr", { class: "total" }, total.map((t, i) => h("td", { class: i ? "right" : "", text: t }))));
+    table.append(body);
+  }
+
+  if (c.active.length >= 2) {
+    const table = $("sourceTable");
+    table.textContent = "";
+    table.append(h("thead", {}, h("tr", {},
+      h("th", { text: "Datei" }), h("th", { text: "Zeitraum" }), h("th", { class: "right", text: "Bezug" }),
+      h("th", { class: "right", text: "Anteil" }), h("th", { class: "right", text: "Einspeisung" }))));
+    const body = h("tbody");
+    for (const s of c.active) {
+      body.append(h("tr", {},
+        h("td", {}, h("span", { class: "source-dot", style: `display:inline-block;margin-right:8px;vertical-align:-1px;background:${THEMES.screen.series[s.colorIndex % 8]}` }), s.name),
+        h("td", { text: s.startMs !== null ? fmtRange(s.startMs, s.endMs) : "–" }),
+        h("td", { class: "right", text: s.hasImport ? fmtEnergy(s.impTotal) : "–" }),
+        h("td", { class: "right", text: c.impTotal > 0 && s.hasImport ? fmtNum((s.impTotal / c.impTotal) * 100, 1) + " %" : "–" }),
+        h("td", { class: "right", text: s.hasExport ? fmtEnergy(s.expTotal) : "–" })
+      ));
+    }
+    table.append(body);
+  }
+}
+
+function renderInsights(c) {
+  const peaks = $("peakList");
+  peaks.textContent = "";
+  if (!c.topImp.length) peaks.append(h("li", {}, h("span", { class: "muted", text: "Keine Verbrauchswerte vorhanden." })));
+  c.topImp.forEach((x, i) => {
+    const when = x.date ? (c.resolutionMs < DAY * 0.99 ? fmtDateTime(x.date) : `${WEEKDAYS[x.date.getDay()]}, ${fmtDate(x.date)}`) : "ohne Zeitangabe";
+    const extra = c.powerOK && x.impP !== null ? ` · Ø ${fmtPower(x.impP)}` : "";
+    peaks.append(h("li", {},
+      h("span", { class: "peak-rank", text: String(i + 1) }),
+      h("div", { class: "peak-main" }, h("strong", { text: fmtEnergy(x.imp) + extra }), h("span", { text: when })),
+      c.impMean > 0 ? h("span", { class: "peak-factor", text: `${fmtNum(x.imp / c.impMean, 1)}× Ø` }) : null
+    ));
+  });
+
+  const hints = $("hintList");
+  hints.textContent = "";
+  for (const hint of buildHints(c, screenName)) hints.append(h("li", { class: hint.type, text: hint.text }));
+}
+
+function renderPreview() {
+  const select = $("previewSelect");
+  if (!app.sources.some((s) => s.id === app.previewId)) app.previewId = app.sources.length ? app.sources[0].id : null;
+  select.textContent = "";
+  for (const s of app.sources) select.append(h("option", { value: String(s.id), text: s.name }));
+  select.value = String(app.previewId);
+
+  const src = app.sources.find((s) => s.id === app.previewId);
+  const table = $("previewTable");
+  table.textContent = "";
+  if (!src) return;
+  const roles = {};
+  if (src.dateCol >= 0) roles[src.dateCol] = ["Zeit", ""];
+  if (src.timeCol >= 0) roles[src.timeCol] = ["Uhrzeit", ""];
+  if (src.importCol >= 0) roles[src.importCol] = ["Bezug", ""];
+  if (src.exportCol >= 0) roles[src.exportCol] = ["Einspeisung", "export"];
+  table.append(h("thead", {}, h("tr", {}, src.headers.map((hd, i) =>
+    h("th", {}, hd, roles[i] ? h("span", { class: "tag " + roles[i][1], text: roles[i][0] }) : null)))));
+  const body = h("tbody");
+  for (const row of src.rows.slice(0, 12)) {
+    body.append(h("tr", {}, src.headers.map((_, i) => h("td", { class: roles[i] ? "col-hl" : "", text: row[i] || "" }))));
+  }
+  table.append(body);
+  $("previewInfo").textContent = `${Math.min(12, src.rows.length)} von ${fmtInt(src.rows.length)} Datenzeilen · Trennzeichen: ${separatorName(src.separator)}`;
+}
+
+function separatorName(sep) {
+  return { ";": "Semikolon", ",": "Komma", "\t": "Tabulator", "|": "senkrechter Strich" }[sep] || sep;
+}
+
+
+/* =========================================================
+   14. DATEI-KARTEN (Einstellungen je Datei)
+   ========================================================= */
+
+function renderSources() {
+  const list = $("sourceList");
+  list.textContent = "";
+  app.sources.forEach((s) => list.append(buildSourceCard(s)));
+}
+
+function columnOptions(src, noneLabel) {
+  const opts = [];
+  if (noneLabel) opts.push(h("option", { value: "-1", text: noneLabel }));
+  src.headers.forEach((hd, i) => opts.push(h("option", { value: String(i), text: hd })));
+  return opts;
+}
+
+function field(labelText, control, hint) {
+  const id = control.id || "f" + Math.random().toString(36).slice(2, 9);
+  control.id = id;
+  return h("div", { class: "field" }, h("label", { htmlFor: id, text: labelText }), control, hint || null);
+}
+
+function buildSourceCard(s) {
+  const ui = (s.ui = {});
+  const recompute = () => { computeSource(s); updateSourceCard(s); refreshDashboard(); };
+
+  // Kopf
+  ui.badge = h("span", { class: "kind-badge" });
+  ui.meta = h("span");
+  const enabled = h("input", { type: "checkbox", checked: s.enabled });
+  enabled.addEventListener("change", () => { s.enabled = enabled.checked; updateSourceCard(s); refreshDashboard(); });
+  const remove = h("button", { class: "icon-btn", type: "button", "aria-label": `${s.name} entfernen`, title: "Datei entfernen", text: "×" });
+  remove.addEventListener("click", () => removeSource(s.id));
+  const head = h("div", { class: "source-head" },
+    h("span", { class: "source-dot", style: `background:${THEMES.screen.series[s.colorIndex % 8]}` }),
+    h("div", { class: "source-title" }, h("strong", { text: s.name, title: s.name }), ui.meta),
+    ui.badge,
+    h("label", { class: "check" }, enabled, "Einbeziehen"),
+    remove
+  );
+
+  // Spalten
+  const dateSel = h("select", {}, columnOptions(s, "— keine Zeitspalte —"));
+  dateSel.value = String(s.dateCol);
+  dateSel.addEventListener("change", () => { s.dateCol = +dateSel.value; s.timeCol = detectTimeColumn(s); recompute(); });
+
+  const impSel = h("select", {}, columnOptions(s, "— kein Verbrauch —"));
+  impSel.value = String(s.importCol);
+  impSel.addEventListener("change", () => { s.importCol = +impSel.value; detectValueTraits(s); syncTraitControls(s); recompute(); });
+
+  const expSel = h("select", {}, columnOptions(s, "— keine Einspeisung —"));
+  expSel.value = String(s.exportCol);
+  expSel.addEventListener("change", () => { s.exportCol = +expSel.value; detectValueTraits(s); syncTraitControls(s); recompute(); });
+
+  // Einheit
+  ui.unitSel = h("select", {},
+    h("option", { value: "auto" }),
+    Object.entries(UNITS).map(([key, u]) => h("option", { value: key, text: u.label })));
+  ui.unitSel.value = s.unitSetting;
+  ui.unitSel.addEventListener("change", () => { s.unitSetting = ui.unitSel.value; recompute(); });
+
+  // Art der Werte
+  ui.modeSel = h("select", {},
+    h("option", { value: "auto" }),
+    h("option", { value: "interval", text: "Verbrauch je Intervall" }),
+    h("option", { value: "cumulative", text: "Zählerstände (fortlaufend)" }));
+  ui.modeSel.value = s.modeSetting;
+  ui.modeSel.addEventListener("change", () => { s.modeSetting = ui.modeSel.value; recompute(); });
+
+  // Wandlerverhältnis
+  ui.ratioInput = h("input", { type: "text", value: s.ratioText, placeholder: "1 = kein Wandler · z. B. 100/5", autocomplete: "off", inputMode: "text", spellcheck: false });
+  ui.ratioHint = h("p", { class: "hint" });
+  let ratioTimer = 0;
+  ui.ratioInput.addEventListener("input", () => {
+    s.ratioText = ui.ratioInput.value;
+    clearTimeout(ratioTimer);
+    ratioTimer = setTimeout(recompute, 350);
+  });
+
+  // Messintervall (nur bei kW/W)
+  ui.intervalInput = h("input", { type: "number", min: "1", step: "1", value: s.intervalText, placeholder: "z. B. 15", inputMode: "numeric" });
+  ui.intervalHint = h("p", { class: "hint" });
+  let intervalTimer = 0;
+  ui.intervalInput.addEventListener("input", () => {
+    s.intervalText = ui.intervalInput.value;
+    clearTimeout(intervalTimer);
+    intervalTimer = setTimeout(recompute, 350);
+  });
+  ui.intervalField = field("Messintervall (Minuten)", ui.intervalInput, ui.intervalHint);
+
+  // Negative Werte = Einspeisung
+  ui.signedInput = h("input", { type: "checkbox", checked: s.signedSplit });
+  ui.signedInput.addEventListener("change", () => { s.signedSplit = ui.signedInput.checked; recompute(); });
+  ui.signedField = h("div", { class: "field" },
+    h("span", { class: "field-label", text: "Vorzeichen" }),
+    h("label", { class: "check", style: "min-height:44px" }, ui.signedInput, "Negative Werte = Einspeisung"));
+
+  ui.status = h("p", { class: "source-status" });
+
+  const grid = h("div", { class: "source-grid" },
+    field("Zeitspalte", dateSel, s.timeCol >= 0 ? h("p", { class: "hint", text: `+ Uhrzeit aus „${s.headers[s.timeCol]}“` }) : null),
+    field("Verbrauch (Bezug)", impSel),
+    field("Einspeisung", expSel),
+    field("Einheit der Werte", ui.unitSel),
+    field("Art der Werte", ui.modeSel),
+    field("Wandlerverhältnis", ui.ratioInput, ui.ratioHint),
+    ui.intervalField,
+    ui.signedField
+  );
+
+  ui.card = h("article", { class: "source-card" }, head, grid, h("div", { class: "source-foot" }, ui.status));
+  updateSourceCard(s);
+  return ui.card;
+}
+
+function syncTraitControls(s) {
+  if (s.ui && s.ui.signedInput) s.ui.signedInput.checked = s.signedSplit;
+}
+
+function updateSourceCard(s) {
+  const ui = s.ui;
+  if (!ui) return;
+  ui.card.classList.toggle("is-disabled", !s.enabled);
+  ui.card.classList.toggle("has-error", !!s.error && s.enabled);
+
+  ui.meta.textContent = `${fmtSize(s.size)} · ${fmtInt(s.rows.length)} Zeilen · ${s.headers.length} Spalten · ${separatorName(s.separator)}`;
+
+  if (s.error) { ui.badge.className = "kind-badge error"; ui.badge.textContent = "Prüfen"; }
+  else if (s.hasImport && s.hasExport) { ui.badge.className = "kind-badge both"; ui.badge.textContent = "Bezug + Einspeisung"; }
+  else if (s.hasExport) { ui.badge.className = "kind-badge both"; ui.badge.textContent = "Nur Einspeisung"; }
+  else { ui.badge.className = "kind-badge"; ui.badge.textContent = "Nur Verbrauch"; }
+
+  ui.unitSel.options[0].textContent = `Automatisch (${s.detectedUnit})`;
+  const modeName = { interval: "Verbrauch je Intervall", cumulative: "Zählerstände" };
+  ui.modeSel.options[0].textContent = `Automatisch (${modeName[s.detectedMode || "interval"]})`;
+  ui.modeSel.disabled = !!s.isPower;
+  if (s.isPower) ui.modeSel.title = "Leistungswerte sind immer Intervallwerte.";
+
+  ui.intervalField.hidden = !s.isPower;
+  ui.intervalHint.textContent = s.resolutionMs ? `Erkannt: ${fmtNum(s.resolutionMs / MINUTE, 0)} Minuten – leer lassen zum Übernehmen` : "Keine Zeitspalte – bitte angeben";
+
+  ui.signedField.hidden = !(s.exportCol < 0 && s.importCol >= 0 && s.mode !== "cumulative");
+
+  const ratioOk = Number.isFinite(parseRatio(s.ratioText)) && parseRatio(s.ratioText) > 0;
+  ui.ratioInput.classList.toggle("is-invalid", !ratioOk);
+  ui.ratioHint.className = "hint" + (ratioOk ? "" : " error");
+  ui.ratioHint.textContent = ratioOk
+    ? (s.ratioText.trim() ? `= Faktor ${fmtFactor(parseRatio(s.ratioText))} – alle Werte werden damit multipliziert` : "Strom-/Spannungswandler, z. B. 100/5 oder 100/5 * 20kV/100V")
+    : "Ungültig – Beispiele: 100/5 · 20 · 150/5A";
+
+  if (s.error) {
+    ui.status.className = "source-status error";
+    ui.status.textContent = s.error;
+  } else {
+    const parts = [`${fmtInt(s.entries.length)} Werte`];
+    if (s.startMs !== null) parts.push(fmtRange(s.startMs, s.endMs));
+    if (s.resolutionMs) parts.push(describeResolution(s.resolutionMs));
+    if (s.hasImport) parts.push(`Bezug ${fmtEnergy(s.impTotal)}`);
+    if (s.hasExport) parts.push(`Einspeisung ${fmtEnergy(s.expTotal)}`);
+    if (s.skipped) parts.push(`${fmtInt(s.skipped)} Zeilen übersprungen`);
+    ui.status.className = "source-status";
+    ui.status.textContent = parts.join(" · ");
+  }
+}
+
+
+/* =========================================================
+   15. DATEIEN LADEN & ENTFERNEN
+   ========================================================= */
+
+function nextColorIndex() {
+  const used = new Set(app.sources.map((s) => s.colorIndex));
+  for (let i = 0; i < 8; i++) if (!used.has(i)) return i;
+  return app.sources.length % 8;
+}
+
+function addSource(text, meta) {
+  const parsed = parseCSVFile(text);
+  const src = {
+    id: app.nextId++,
+    name: meta.name,
+    size: meta.size,
+    headers: parsed.headers,
+    rows: parsed.rows,
+    separator: parsed.separator,
+    enabled: true,
+    unitSetting: "auto",
+    modeSetting: "auto",
+    ratioText: "",
+    intervalText: "",
+    colorIndex: nextColorIndex()
+  };
+  src.columns = analyzeColumns(src.headers, src.rows);
+  detectColumns(src);
+  if (src.importCol < 0 && src.exportCol < 0) throw new Error("keine Spalte mit Zahlenwerten gefunden.");
+  computeSource(src);
+  app.sources.push(src);
+  return src;
+}
+
+async function handleFiles(fileList) {
+  const files = [...(fileList || [])];
+  if (!files.length) return;
+  const msg = $("importMessage");
+  showMessage(msg, "Dateien werden gelesen …", "info");
+  const errors = [];
+  let loaded = 0;
+  for (const file of files) {
+    if (app.sources.length >= MAX_FILES) { errors.push(`Maximal ${MAX_FILES} Dateien gleichzeitig.`); break; }
+    if (!/\.(csv|txt|tsv)$/i.test(file.name)) { errors.push(`„${file.name}“: keine CSV-Datei.`); continue; }
+    if (file.size === 0) { errors.push(`„${file.name}“: Datei ist leer.`); continue; }
+    if (file.size > MAX_FILE_SIZE) { errors.push(`„${file.name}“: größer als 25 MB.`); continue; }
+    if (app.sources.some((s) => s.name === file.name && s.size === file.size)) { errors.push(`„${file.name}“ ist bereits geladen.`); continue; }
+    try {
+      addSource(decodeText(await file.arrayBuffer()), { name: file.name, size: file.size });
+      loaded++;
+    } catch (err) {
+      errors.push(`„${file.name}“: ${err.message}`);
+    }
+  }
+  afterSourcesChanged(loaded, errors);
+}
+
+function afterSourcesChanged(loaded, errors = []) {
+  const msg = $("importMessage");
+  if (loaded) app.granManual = false;
+  renderSources();
+  refreshDashboard();
+  if (loaded && !errors.length) showMessage(msg, `${loaded} ${loaded === 1 ? "Datei" : "Dateien"} erfolgreich geladen.`, "success");
+  else if (loaded) showMessage(msg, `${loaded} geladen. Hinweise:\n${errors.join("\n")}`, "info");
+  else if (errors.length) showMessage(msg, errors.join("\n"), "error");
+  if (loaded && app.sources.length === loaded) {
+    requestAnimationFrame(() => $("dashboard").scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+}
+
+function removeSource(id) {
+  app.sources = app.sources.filter((s) => s.id !== id);
+  renderSources();
+  refreshDashboard();
+  showMessage($("importMessage"), app.sources.length ? "Datei entfernt." : "Alle Dateien entfernt – es wurde nichts gespeichert.", "info");
+}
+
+function clearAll() {
+  app.sources = [];
+  app.combined = null;
+  app.previewId = null;
+  app.granManual = false;
+  $("fileInput").value = "";
+  $("siteName").value = "";
+  $("siteLocation").value = "";
+  $("siteNote").value = "";
+  $("showFileNames").checked = false;
+  for (const box of chartRegistry.keys()) box.textContent = "";
+  chartRegistry.clear();
+  renderSources();
+  refreshDashboard();
+  showMessage($("pdfMessage"), "");
+  showMessage($("importMessage"), "Alle Daten und Angaben wurden aus dem Arbeitsspeicher entfernt.", "success");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* =========================================================
+   16. PDF-ERZEUGUNG (eigene Umsetzung, ohne externe Bibliothek)
+   Das PDF enthält bewusst KEINE Metadaten (Autor, Software,
+   Erstellungszeit) – so lassen sich keine Rückschlüsse ziehen.
+   ========================================================= */
+
+// Zeichenbreiten der Standardschrift Helvetica (Zeichen 32–126)
+const HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const HELV_B = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+const EXT_W = { 128: [556, 556], 132: [333, 500], 133: [1000, 1000], 147: [333, 500], 148: [333, 500], 149: [350, 350], 150: [556, 556], 151: [1000, 1000], 176: [400, 400], 183: [278, 278], 196: [667, 722], 214: [778, 778], 215: [584, 584], 216: [778, 778], 220: [722, 722], 223: [611, 611], 228: [556, 556], 246: [556, 611], 252: [556, 611], 8805: [549, 549] };
+const WIN_ANSI = { "€": 128, "‚": 130, "„": 132, "…": 133, "‘": 145, "’": 146, "“": 147, "”": 148, "•": 149, "–": 150, "—": 151, "™": 153 };
+
+function winAnsi(ch) {
+  const c = ch.charCodeAt(0);
+  if (c >= 32 && c <= 126) return c;
+  if (c >= 160 && c <= 255) return c;
+  if (WIN_ANSI[ch]) return WIN_ANSI[ch];
+  if (c === 0x202f || c === 0x2009 || c === 0xa0) return 32;
+  if (ch === "≈") return 126; // ~
+  if (ch === "≥") return 62;
+  return 63; // ?
+}
+
+class PdfWriter {
+  constructor() {
+    this.W = 595.28; // A4 in Punkten
+    this.H = 841.89;
+    this.pages = [];
+    this.ops = null;
+  }
+  addPage() { this.ops = []; this.pages.push(this.ops); }
+  n(v) { return String(Math.round(v * 100) / 100); }
+  rgb(hex) {
+    const v = parseInt(hex.slice(1), 16);
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255].map((c) => (c / 255).toFixed(3)).join(" ");
+  }
+  width(str, size, bold) {
+    let w = 0;
+    for (const ch of String(str)) {
+      const c = winAnsi(ch);
+      w += c >= 32 && c <= 126 ? (bold ? HELV_B : HELV)[c - 32] : EXT_W[c] ? EXT_W[c][bold ? 1 : 0] : 556;
+    }
+    return (w * size) / 1000;
+  }
+  fit(str, max, size, bold) {
+    let s = String(str);
+    if (this.width(s, size, bold) <= max) return s;
+    while (s.length > 1 && this.width(s + "…", size, bold) > max) s = s.slice(0, -1);
+    return s + "…";
+  }
+  wrap(str, max, size, bold) {
+    const lines = [];
+    let line = "";
+    for (const word of String(str).split(/\s+/)) {
+      const test = line ? line + " " + word : word;
+      if (this.width(test, size, bold) <= max || !line) line = test;
+      else { lines.push(line); line = word; }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+  text(str, x, y, o = {}) {
+    const size = o.size || 9, bold = !!o.bold;
+    const s = o.maxWidth ? this.fit(str, o.maxWidth, size, bold) : String(str);
+    const w = this.width(s, size, bold);
+    const tx = o.align === "right" ? x - w : o.align === "center" ? x - w / 2 : x;
+    let hex = "";
+    for (const ch of s) hex += winAnsi(ch).toString(16).padStart(2, "0");
+    this.ops.push(`BT /${bold ? "F2" : "F1"} ${size} Tf ${this.rgb(o.color || "#0f172a")} rg ${this.n(tx)} ${this.n(this.H - y)} Td <${hex}> Tj ET`);
+    return w;
+  }
+  roundRectPath(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    const k = 0.5523 * r, X = x, Y = this.H - y - h, p = (v) => this.n(v);
+    return [
+      `${p(X + r)} ${p(Y)} m`, `${p(X + w - r)} ${p(Y)} l`,
+      `${p(X + w - r + k)} ${p(Y)} ${p(X + w)} ${p(Y + r - k)} ${p(X + w)} ${p(Y + r)} c`,
+      `${p(X + w)} ${p(Y + h - r)} l`,
+      `${p(X + w)} ${p(Y + h - r + k)} ${p(X + w - r + k)} ${p(Y + h)} ${p(X + w - r)} ${p(Y + h)} c`,
+      `${p(X + r)} ${p(Y + h)} l`,
+      `${p(X + r - k)} ${p(Y + h)} ${p(X)} ${p(Y + h - r + k)} ${p(X)} ${p(Y + h - r)} c`,
+      `${p(X)} ${p(Y + r)} l`,
+      `${p(X)} ${p(Y + r - k)} ${p(X + r - k)} ${p(Y)} ${p(X + r)} ${p(Y)} c`, "h"
+    ].join(" ");
+  }
+  rect(x, y, w, h, o = {}) {
+    if (w <= 0 || h <= 0) return;
+    const ops = ["q"];
+    if (o.fill) ops.push(this.rgb(o.fill) + " rg");
+    if (o.stroke) ops.push(this.rgb(o.stroke) + " RG", this.n(o.lineWidth || 0.6) + " w");
+    if (o.alpha) ops.push("/GA gs");
+    ops.push(o.r ? this.roundRectPath(x, y, w, h, o.r) : `${this.n(x)} ${this.n(this.H - y - h)} ${this.n(w)} ${this.n(h)} re`);
+    ops.push(o.fill && o.stroke ? "B" : o.fill ? "f" : "S", "Q");
+    this.ops.push(ops.join(" "));
+  }
+  line(x1, y1, x2, y2, o = {}) {
+    this.ops.push(`q ${this.rgb(o.color || "#cbd5e1")} RG ${this.n(o.width || 0.6)} w ${this.n(x1)} ${this.n(this.H - y1)} m ${this.n(x2)} ${this.n(this.H - y2)} l S Q`);
+  }
+  path(pts, o = {}) {
+    if (pts.length < 2) return;
+    const ops = ["q"];
+    if (o.fill) ops.push(this.rgb(o.fill) + " rg");
+    if (o.stroke) ops.push(this.rgb(o.stroke) + " RG", this.n(o.width || 0.8) + " w", "1 j 1 J");
+    if (o.alpha) ops.push("/GA gs");
+    ops.push(pts.map((q, i) => `${this.n(q[0])} ${this.n(this.H - q[1])} ${i ? "l" : "m"}`).join(" "));
+    if (o.closed) ops.push("h");
+    ops.push(o.fill ? "f" : "S", "Q");
+    this.ops.push(ops.join(" "));
+  }
+  output() {
+    const objs = [null, null];
+    const add = (s) => { objs.push(s); return objs.length; };
+    const f1 = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+    const f2 = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+    const gs = add("<< /Type /ExtGState /ca 0.18 >>");
+    const kids = [];
+    for (const ops of this.pages) {
+      const body = ops.join("\n");
+      const content = add(`<< /Length ${body.length} >>\nstream\n${body}\nendstream`);
+      kids.push(add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.W} ${this.H}] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> /ExtGState << /GA ${gs} 0 R >> >> /Contents ${content} 0 R >>`));
+    }
+    objs[0] = "<< /Type /Catalog /Pages 2 0 R >>";
+    objs[1] = `<< /Type /Pages /Kids [${kids.map((k) => k + " 0 R").join(" ")}] /Count ${kids.length} >>`;
+    let out = "%PDF-1.4\n";
+    const offsets = [];
+    objs.forEach((o, i) => { offsets.push(out.length); out += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+    const xref = out.length;
+    out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offsets.map((o) => String(o).padStart(10, "0") + " 00000 n \n").join("");
+    out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    const bytes = new Uint8Array(out.length);
+    for (let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 255;
+    return bytes;
+  }
+}
+
+function drawChartPdf(pdf, spec, x, y, w, hgt) {
+  const L = layoutChart(spec, w, hgt, THEMES.print);
+  for (const p of L.prims) {
+    if (p.type === "line") pdf.line(x + p.x1, y + p.y1, x + p.x2, y + p.y2, { color: p.stroke, width: p.width * 0.7 });
+    else if (p.type === "rect") pdf.rect(x + p.x, y + p.y, p.w, p.h, { fill: p.fill, r: p.r ? Math.min(p.r, 1.2) : 0 });
+    else if (p.type === "text") pdf.text(p.text, x + p.x, y + p.y, { size: p.size, color: p.fill, align: p.anchor === "end" ? "right" : p.anchor === "middle" ? "center" : "left" });
+    else if (p.type === "path") pdf.path(p.pts.map((q) => [x + q[0], y + q[1]]), { fill: p.fill, stroke: p.stroke, width: p.width, alpha: p.alpha, closed: p.closed });
+  }
+}
+
+function buildPdfReport() {
+  const c = app.combined;
+  if (!c || !c.active.length) throw new Error("Keine auswertbaren Daten vorhanden.");
+
+  const meta = {
+    name: $("siteName").value.trim(),
+    location: $("siteLocation").value.trim(),
+    note: $("siteNote").value.trim(),
+    showNames: $("showFileNames").checked
+  };
+  // Ohne Häkchen erscheinen Dateien nur als "Datei 1", "Datei 2" …
+  const nameOf = (s) => (meta.showNames ? `„${s.name}“` : `Datei ${app.sources.indexOf(s) + 1}`);
+
+  const NAVY = "#0b1424", INK = "#0f172a", GRAY = "#64748b", LINE = "#e2e8f0", CYAN = "#0891b2";
+  const pdf = new PdfWriter();
+  const W = pdf.W, MX = 40, CW = W - 2 * MX, BOTTOM = pdf.H - 52;
+  let y = 0;
+
+  const newPage = () => {
+    pdf.addPage();
+    pdf.rect(0, 0, W, 34, { fill: NAVY });
+    const wx = pdf.text("CONSUM", MX, 22, { size: 10, bold: true, color: "#ffffff" });
+    pdf.text("PLY", MX + wx, 22, { size: 10, bold: true, color: "#22d3ee" });
+    pdf.text(meta.name || "Energieverbrauchsanalyse", W - MX, 22, { size: 8, color: "#cbd5e1", align: "right", maxWidth: 300 });
+    y = 58;
+  };
+  const ensure = (needed) => { if (y + needed > BOTTOM) newPage(); };
+  const sectionTitle = (title, sub) => {
+    ensure(sub ? 70 : 56);
+    pdf.text(title, MX, y + 10, { size: 12, bold: true, color: INK });
+    pdf.rect(MX, y + 16, 22, 2, { fill: CYAN });
+    y += 26;
+    if (sub) { pdf.text(sub, MX, y + 4, { size: 7.5, color: GRAY, maxWidth: CW }); y += 14; }
+  };
+  const drawLegend = (items) => {
+    y += 6;
+    let lx = MX;
+    for (const it of items) {
+      const tw = pdf.width(it.label, 7, false);
+      if (lx + tw + 22 > MX + CW) { lx = MX; y += 12; }
+      pdf.rect(lx, y - 6, 7, 7, { fill: it.color, r: 1.5 });
+      pdf.text(it.label, lx + 11, y, { size: 7, color: "#334155" });
+      lx += tw + 26;
+    }
+    y += 10;
+  };
+  const drawTable = (cols, rows) => {
+    const total = cols.reduce((a, col) => a + col.w, 0);
+    cols.forEach((col) => (col.pw = (col.w / total) * CW));
+    const headH = 18, rowH = 15;
+    const header = () => {
+      pdf.rect(MX, y, CW, headH, { fill: "#eef2f7" });
+      let x = MX;
+      for (const col of cols) {
+        const right = col.align === "right";
+        pdf.text(col.title, right ? x + col.pw - 6 : x + 6, y + 12, { size: 7, bold: true, color: "#475569", align: right ? "right" : "left", maxWidth: col.pw - 10 });
+        x += col.pw;
+      }
+      y += headH;
+    };
+    ensure(headH + rowH * Math.min(rows.length, 3) + 10);
+    header();
+    for (const row of rows) {
+      if (y + rowH > BOTTOM) { newPage(); header(); }
+      if (row.bold) pdf.rect(MX, y, CW, rowH, { fill: "#f8fafc" });
+      let x = MX;
+      row.cells.forEach((value, i) => {
+        const col = cols[i], right = col.align === "right";
+        pdf.text(value, right ? x + col.pw - 6 : x + 6, y + 10.5, { size: 7.5, bold: !!row.bold, color: INK, align: right ? "right" : "left", maxWidth: col.pw - 10 });
+        x += col.pw;
+      });
+      pdf.line(MX, y + rowH, MX + CW, y + rowH, { color: LINE, width: 0.5 });
+      y += rowH;
+    }
+    y += 16;
+  };
+  const paragraph = (text, size = 8, color = "#334155", indent = 0) => {
+    for (const line of pdf.wrap(text, CW - indent, size, false)) {
+      ensure(size + 5);
+      pdf.text(line, MX + indent, y + size, { size, color });
+      y += size + 4;
+    }
+  };
+
+  /* ---------- Seite 1: Kopf ---------- */
+  pdf.addPage();
+  pdf.rect(0, 0, W, 104, { fill: NAVY });
+  pdf.rect(0, 104, W, 3, { fill: "#22d3ee" });
+  const wx = pdf.text("CONSUM", MX, 46, { size: 22, bold: true, color: "#ffffff" });
+  pdf.text("PLY", MX + wx, 46, { size: 22, bold: true, color: "#22d3ee" });
+  pdf.text("Analyse des Energieverbrauchs", MX, 68, { size: 10, color: "#94a3b8" });
+  pdf.text(`Bericht vom ${fmtDate(new Date())}`, W - MX, 46, { size: 8.5, color: "#cbd5e1", align: "right" });
+  pdf.text(meta.name || "Anlage ohne Bezeichnung", W - MX, 68, { size: 11, bold: true, color: "#ffffff", align: "right", maxWidth: 280 });
+  if (meta.location) pdf.text(meta.location, W - MX, 84, { size: 8.5, color: "#94a3b8", align: "right", maxWidth: 280 });
+  y = 128;
+
+  /* ---------- Angaben zur Anlage ---------- */
+  const detected = c.hasImport && c.hasExport ? "Verbrauch (Bezug) und Einspeisung" : c.hasExport ? "Nur Einspeisung" : "Nur Verbrauch – keine Einspeisung";
+  const info = [
+    ["Anlage", meta.name || "–"],
+    ["Standort", meta.location || "–"],
+    ["Zeitraum", c.dated ? `${fmtRange(c.startMs, c.endMs)} (${fmtSpan(c.spanMs)})` : "ohne Zeitangaben"],
+    ["Datenbasis", [`${c.active.length} ${c.active.length === 1 ? "Datei" : "Dateien"}`, `${fmtInt(c.count)} Messwerte`, describeResolution(c.resolutionMs)].filter(Boolean).join(" · ")],
+    ["Erkannt", detected]
+  ];
+  const noteLines = meta.note ? pdf.wrap(meta.note, CW - 110, 8.5, false) : [];
+  const boxH = info.length * 15 + (noteLines.length ? noteLines.length * 12 + 6 : 0) + 18;
+  pdf.rect(MX, y, CW, boxH, { fill: "#f8fafc", stroke: LINE, r: 7 });
+  let iy = y + 18;
+  for (const [label, value] of info) {
+    pdf.text(label.toUpperCase(), MX + 14, iy, { size: 6.8, bold: true, color: GRAY });
+    pdf.text(value, MX + 100, iy, { size: 8.8, bold: label === "Anlage", color: INK, maxWidth: CW - 114 });
+    iy += 15;
+  }
+  if (noteLines.length) {
+    pdf.text("BEMERKUNG", MX + 14, iy + 2, { size: 6.8, bold: true, color: GRAY });
+    noteLines.forEach((line, i) => pdf.text(line, MX + 100, iy + 2 + i * 12, { size: 8.5, color: INK }));
+  }
+  y += boxH + 22;
+
+  /* ---------- Kennzahlen ---------- */
+  sectionTitle("Kennzahlen");
+  const kpis = kpiList(c);
+  const gap = 8, bw = (CW - gap * 3) / 4, bh = 56;
+  const accents = { amber: "#d97706", green: "#059669" };
+  kpis.forEach((k, i) => {
+    const col = i % 4;
+    if (col === 0 && i > 0) y += bh + gap;
+    if (col === 0) ensure(bh + 4);
+    const x = MX + col * (bw + gap);
+    pdf.rect(x, y, bw, bh, { fill: "#ffffff", stroke: LINE, r: 6 });
+    pdf.rect(x + 10, y, bw - 20, 2, { fill: accents[k.accent] || CYAN });
+    pdf.text(k.label.toUpperCase(), x + 10, y + 16, { size: 6, bold: true, color: GRAY, maxWidth: bw - 20 });
+    pdf.text(k.value, x + 10, y + 34, { size: 12.5, bold: true, color: INK, maxWidth: bw - 20 });
+    pdf.text(k.sub || "", x + 10, y + 47, { size: 6.2, color: GRAY, maxWidth: bw - 20 });
+  });
+  y += bh + 26;
+
+  /* ---------- Verlauf ---------- */
+  const mainSpec = mainChartSpec(c, app.granularity, nameOf);
+  if (mainSpec) {
+    ensure(290);
+    sectionTitle("Verlauf", `${granDescription(c, app.granularity)} in kWh${c.hasExport ? " · Bezug nach oben, Einspeisung nach unten" : ""}`);
+    drawLegend(legendItems(c, nameOf, THEMES.print, mainSpec.kind === "bar"));
+    drawChartPdf(pdf, mainSpec, MX, y, CW, 200);
+    y += 216;
+  }
+
+  /* ---------- Profile ---------- */
+  const hourSpec = hourProfileSpec(c), weekSpec = weekdaySpec(c);
+  if (hourSpec || weekSpec) {
+    ensure(230);
+    sectionTitle("Verbrauchsprofil");
+    const half = (CW - 20) / 2;
+    const charts = [
+      hourSpec && { spec: hourSpec, title: "Ø Tagesprofil", sub: "Mittlere Leistung je Uhrzeit (kW)" },
+      weekSpec && { spec: weekSpec, title: "Ø nach Wochentag", sub: "Mittlere Energie pro Tag (kWh)" }
+    ].filter(Boolean);
+    charts.forEach((ch, i) => {
+      const x = MX + i * (half + 20);
+      const w = charts.length === 1 ? CW : half;
+      pdf.text(ch.title, x, y + 8, { size: 9, bold: true, color: INK });
+      pdf.text(ch.sub, x, y + 19, { size: 7, color: GRAY });
+      drawChartPdf(pdf, ch.spec, x, y + 26, w, 150);
+    });
+    y += 190;
+  }
+
+  /* ---------- Monatsübersicht ---------- */
+  const months = monthRows(c);
+  if (months.length) {
+    sectionTitle("Monatsübersicht", months.some((m) => m.partial) ? "* Monat nur teilweise in den Daten enthalten" : null);
+    const cols = [{ title: "Monat", w: 2.2 }];
+    if (c.hasImport) cols.push({ title: "Bezug", w: 1.5, align: "right" }, { title: "Ø pro Tag", w: 1.4, align: "right" });
+    if (c.hasExport) cols.push({ title: "Einspeisung", w: 1.5, align: "right" }, { title: "Netto", w: 1.5, align: "right" });
+    const rows = months.map((m) => {
+      const cells = [m.label + (m.partial ? " *" : "")];
+      if (c.hasImport) cells.push(fmtEnergy(m.imp), m.perDay !== null ? fmtEnergy(m.perDay) : "–");
+      if (c.hasExport) cells.push(fmtEnergy(m.exp), fmtEnergy(m.imp - m.exp));
+      return { cells };
+    });
+    const total = ["Summe"];
+    if (c.hasImport) total.push(fmtEnergy(c.impTotal), c.impPerDay !== null ? fmtEnergy(c.impPerDay) : "–");
+    if (c.hasExport) total.push(fmtEnergy(c.expTotal), fmtEnergy(c.impTotal - c.expTotal));
+    rows.push({ cells: total, bold: true });
+    drawTable(cols, rows);
+  }
+
+  /* ---------- Höchste Werte ---------- */
+  if (c.topImp.length) {
+    sectionTitle("Höchste Verbrauchswerte", "Die fünf Messintervalle mit dem höchsten Bezug");
+    const cols = [{ title: "Rang", w: 0.6 }, { title: "Zeitpunkt", w: 3 }, { title: "Energie", w: 1.4, align: "right" }];
+    if (c.powerOK) cols.push({ title: "Ø Leistung", w: 1.4, align: "right" });
+    cols.push({ title: "Vielfaches vom Ø", w: 1.5, align: "right" });
+    drawTable(cols, c.topImp.map((x, i) => {
+      const cells = [String(i + 1), x.date ? (c.resolutionMs < DAY * 0.99 ? fmtDateTime(x.date) : `${WEEKDAYS[x.date.getDay()]}, ${fmtDate(x.date)}`) : "–", fmtEnergy(x.imp)];
+      if (c.powerOK) cells.push(x.impP !== null ? fmtPower(x.impP) : "–");
+      cells.push(c.impMean > 0 ? `${fmtNum(x.imp / c.impMean, 1)}×` : "–");
+      return { cells };
+    }));
+  }
+
+  /* ---------- Datenquellen ---------- */
+  sectionTitle("Datenquellen");
+  drawTable(
+    [{ title: "Datei", w: 2 }, { title: "Zeitraum", w: 2.3 }, { title: "Einheit / Art", w: 1.9 }, { title: "Wandler", w: 0.9, align: "right" }, { title: "Bezug", w: 1.3, align: "right" }, { title: "Einspeisung", w: 1.3, align: "right" }],
+    app.sources.filter((s) => s.enabled && !s.error).map((s) => ({
+      cells: [
+        nameOf(s).replace(/[„“]/g, ""),
+        s.startMs !== null ? fmtRange(s.startMs, s.endMs) : "–",
+        `${s.unit} · ${s.mode === "cumulative" ? "Zählerstände" : "Intervallwerte"}`,
+        s.factor !== 1 ? "× " + fmtFactor(s.factor) : "–",
+        s.hasImport ? fmtEnergy(s.impTotal) : "–",
+        s.hasExport ? fmtEnergy(s.expTotal) : "–"
+      ]
+    }))
+  );
+
+  /* ---------- Hinweise ---------- */
+  sectionTitle("Hinweise zur Analyse");
+  for (const hint of buildHints(c, nameOf)) {
+    const color = hint.type === "warn" ? "#d97706" : hint.type === "ok" ? "#059669" : "#2563eb";
+    const lines = pdf.wrap(hint.text, CW - 14, 8, false);
+    ensure(lines.length * 12 + 4);
+    pdf.rect(MX, y + 3, 5, 5, { fill: color, r: 2.5 });
+    lines.forEach((line, i) => pdf.text(line, MX + 13, y + 8 + i * 12, { size: 8, color: "#334155" }));
+    y += lines.length * 12 + 4;
+  }
+  y += 12;
+
+  /* ---------- Methodik ---------- */
+  sectionTitle("Berechnungsgrundlage");
+  [
+    "Intervallwerte werden addiert. Bei Zählerständen ergibt sich der Verbrauch aus der Differenz zweier aufeinanderfolgender Stände.",
+    "Leistungswerte (kW, W) werden mit der Länge des Messintervalls in Energie (kWh) umgerechnet. Wandlerfaktoren werden auf alle Werte der jeweiligen Datei angewendet.",
+    "Spitzenleistung: höchste mittlere Leistung eines Messintervalls. Grundlast: 5-%-Wert der Bezugsleistung (Nullwerte ausgenommen). Tageswerte berücksichtigen nur vollständig erfasste Tage.",
+    "Alle Berechnungen wurden lokal auf dem Gerät durchgeführt. Es wurden keine Daten übertragen oder gespeichert."
+  ].forEach((t) => { paragraph(t, 7.8); y += 3; });
+
+  /* ---------- Fußzeile auf jeder Seite ---------- */
+  const total = pdf.pages.length;
+  pdf.pages.forEach((ops, i) => {
+    pdf.ops = ops;
+    pdf.line(MX, pdf.H - 34, W - MX, pdf.H - 34, { color: LINE, width: 0.6 });
+    pdf.text("Erstellt mit Consumply · lokal berechnet, keine Datenübertragung", MX, pdf.H - 22, { size: 7, color: GRAY });
+    pdf.text(`Seite ${i + 1} von ${total}`, W - MX, pdf.H - 22, { size: 7, color: GRAY, align: "right" });
+  });
+
+  return pdf.output();
+}
+
+function pdfFileName() {
+  const name = $("siteName").value.trim()
+    .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/Ä/g, "Ae").replace(/Ö/g, "Oe").replace(/Ü/g, "Ue").replace(/ß/g, "ss")
+    .replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  const d = new Date();
+  return `Consumply-Bericht${name ? "-" + name : ""}-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.pdf`;
+}
+
+function downloadPdf() {
+  const msg = $("pdfMessage");
+  try {
+    const bytes = buildPdfReport();
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    const link = h("a", { href: url, download: pdfFileName() });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    showMessage(msg, "PDF-Bericht wurde auf deinem Gerät erstellt.", "success");
+  } catch (err) {
+    showMessage(msg, "PDF konnte nicht erstellt werden: " + err.message, "error");
+  }
+}
+
+
+/* =========================================================
+   17. BEISPIELDATEN (werden im Browser erzeugt)
+   ========================================================= */
+
+function seededRandom(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const deNum = (v, d) => v.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: true });
+
+function sampleHousehold() {
+  const rnd = seededRandom(7);
+  const profile = [.16, .14, .13, .13, .14, .18, .32, .55, .48, .34, .30, .33, .42, .36, .30, .31, .38, .62, .86, .92, .78, .58, .38, .24];
+  const lines = ["Zeitstempel;Verbrauch (kWh)"];
+  const days = 92;
+  for (let d = 0; d < days; d++) {
+    const day = new Date(2026, 7, 1 + d);
+    const weekend = day.getDay() === 0 || day.getDay() === 6;
+    const season = 1 + (d / days) * 0.45;
+    const away = d >= 40 && d < 47;
+    for (let hr = 0; hr < 24; hr++) {
+      let v = profile[hr] * season * (weekend && hr >= 9 && hr <= 16 ? 1.5 : 1) * (0.8 + rnd() * 0.4);
+      if (away) v = 0.11 + rnd() * 0.05;
+      if (rnd() < 0.004) v += 1.8 + rnd() * 1.5;
+      const ts = new Date(2026, 7, 1 + d, hr);
+      lines.push(`${fmtDate(ts)} ${fmtTime(ts)};${deNum(v, 3)}`);
+    }
+  }
+  return lines.join("\r\n");
+}
+
+function samplePV() {
+  const rnd = seededRandom(21);
+  const lines = ["Datum;Uhrzeit;Bezug [kW];Einspeisung [kW]"];
+  for (let d = 0; d < 31; d++) {
+    const cloud = 0.35 + rnd() * 0.65;
+    for (let q = 0; q < 96; q++) {
+      const ts = new Date(2026, 6, 1 + d, 0, q * 15);
+      const hr = q / 4;
+      let load = 0.28 + (hr > 6 && hr < 9 ? 0.9 : 0) + (hr > 17 && hr < 22 ? 1.4 : 0) + (hr > 11 && hr < 13 ? 0.7 : 0);
+      load *= 0.75 + rnd() * 0.5;
+      if (rnd() < 0.01) load += 2.5 + rnd() * 2;
+      const sun = hr > 5.5 && hr < 20.5 ? Math.sin(((hr - 5.5) / 15) * Math.PI) : 0;
+      const pv = 7.2 * sun * cloud * (0.85 + rnd() * 0.15);
+      const net = load - pv;
+      lines.push(`${fmtDate(ts)};${fmtTime(ts)};${deNum(Math.max(net, 0), 3)};${deNum(Math.max(-net, 0), 3)}`);
+    }
+  }
+  return lines.join("\r\n");
+}
+
+function sampleMeter() {
+  const rnd = seededRandom(11);
+  const season = [1.35, 1.3, 1.15, 1, .85, .75, .72, .75, .85, 1, 1.2, 1.35];
+  const solar = [.25, .4, .7, 1, 1.25, 1.35, 1.4, 1.25, .95, .6, .3, .2];
+  let imp = 18452.3, exp = 3120.8;
+  const lines = ["Datum;Zählerstand Bezug (kWh);Zählerstand Einspeisung (kWh)"];
+  for (let d = 0; d <= 365; d++) {
+    const date = new Date(2025, 10, 1 + d);
+    lines.push(`${fmtDate(date)};${deNum(imp, 1)};${deNum(exp, 1)}`);
+    const m = date.getMonth();
+    imp += 8.5 * season[m] * (0.7 + rnd() * 0.6);
+    exp += 11 * solar[m] * (0.3 + rnd() * 0.9);
+  }
+  return lines.join("\r\n");
+}
+
+function loadSample(kind) {
+  const samples = {
+    household: ["Beispiel-Haushalt-Stundenwerte.csv", sampleHousehold],
+    pv: ["Beispiel-PV-Anlage-15min.csv", samplePV],
+    meter: ["Beispiel-Zaehlerstaende.csv", sampleMeter]
+  };
+  const [name, generate] = samples[kind];
+  const text = generate();
+  const size = new Blob([text]).size;
+  if (app.sources.some((s) => s.name === name)) { showMessage($("importMessage"), `„${name}“ ist bereits geladen.`, "info"); return; }
+  if (app.sources.length >= MAX_FILES) { showMessage($("importMessage"), `Maximal ${MAX_FILES} Dateien gleichzeitig.`, "error"); return; }
+  try {
+    addSource(text, { name, size });
+    afterSourcesChanged(1);
+  } catch (err) {
+    showMessage($("importMessage"), err.message, "error");
+  }
+}
+
+
+/* =========================================================
+   18. EREIGNISSE (Klicks, Drag & Drop)
+   ========================================================= */
+
+const fileInput = $("fileInput");
+const dropzone = $("dropzone");
+
+fileInput.addEventListener("change", async () => {
+  await handleFiles(fileInput.files);
+  fileInput.value = ""; // dieselbe Datei kann erneut gewählt werden
+});
+
+["dragenter", "dragover"].forEach((type) => dropzone.addEventListener(type, (e) => {
+  e.preventDefault();
+  dropzone.classList.add("is-dragover");
+}));
+["dragleave", "drop"].forEach((type) => dropzone.addEventListener(type, (e) => {
+  e.preventDefault();
+  if (type === "dragleave" && dropzone.contains(e.relatedTarget)) return;
+  dropzone.classList.remove("is-dragover");
+}));
+dropzone.addEventListener("drop", (e) => handleFiles(e.dataTransfer.files));
+
+// Verhindert, dass der Browser eine danebengezogene Datei öffnet
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => e.preventDefault());
+
+document.querySelectorAll("[data-sample]").forEach((btn) => btn.addEventListener("click", () => loadSample(btn.dataset.sample)));
+
+document.querySelectorAll("#granButtons button").forEach((btn) => btn.addEventListener("click", () => {
+  if (btn.disabled) return;
+  app.granularity = btn.dataset.gran;
+  app.granManual = true;
+  renderMainChart(app.combined);
+}));
+
+$("previewSelect").addEventListener("change", (e) => { app.previewId = +e.target.value; renderPreview(); });
+$("clearAllButton").addEventListener("click", clearAll);
+$("pdfButton").addEventListener("click", downloadPdf);
+$("headerPdfButton").addEventListener("click", () => {
+  $("reportTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+  setTimeout(() => $("siteName").focus({ preventScroll: true }), 450);
+});
+
+showMessage($("importMessage"), "Wähle eine oder mehrere CSV-Dateien aus – oder probiere ein Beispiel.");
+</script>
+</body>
+</html>
